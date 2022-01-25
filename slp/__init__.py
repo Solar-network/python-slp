@@ -11,7 +11,6 @@ import hashlib
 DECIMAL128 = {}
 INPUT_TYPES = {}
 TYPES_INPUT = {}
-JSON = {}
 
 PUBLIC_IP = "127.0.0.1"
 PORT = 5000
@@ -92,3 +91,52 @@ def get_token_id(slp_type, symbol, blockheight, txid):
     """
     raw = "%s.%s.%s.%s" % (slp_type.upper(), symbol, blockheight, txid)
     return hashlib.md5(raw.encode("utf-8")).hexdigest()
+
+
+def merge_milestone(a, b):
+    merged = dict(a)
+    for k, v in b.items():
+        if k in merged:
+            if type(merged[k]) != type(v):
+                raise Exception("Unmergeable data")
+            if isinstance(v, dict):
+                merged[k].update(v)
+            elif isinstance(v, list):
+                merged[k].extends(v)
+            else:
+                merged[k] = v
+        else:
+            merged[k] = v
+    return merged
+
+
+class Config(dict):
+
+    def load(self, name, **overrides):
+
+        data = loadJson(f"{name}.json")
+        milestones = loadJson("milestones.json")
+
+        previous_milestone = {}
+        data["milestones"] = {1: previous_milestone}
+
+        for milestone in sorted(milestones, key=lambda m: m["height"]):
+            height = milestone.pop("height")
+            milestone = merge_milestone(
+                previous_milestone, milestone
+            )
+            data["milestones"][height] = milestone
+            previous_milestone = milestone
+
+        self.clear()
+        self.update(dict(data, **overrides))
+
+    def get(self, key, height=1):
+        if key in self:
+            return dict.__getitem__(self, key)
+        else:
+            height = [h for h in self.get("milestones") if h <= height][-1]
+            return dict.__getitem__(self, "milestones").get(height, {})[key]
+
+
+JSON = Config()
