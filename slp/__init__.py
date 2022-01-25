@@ -121,6 +121,7 @@ class Config(dict):
             raise Exception("No configuration file found for %s" % name)
 
         previous_milestone = {}
+        data["milestones"] = {}
         milestones = loadJson("milestones.json")
 
         for milestone in sorted(milestones, key=lambda m: m["height"]):
