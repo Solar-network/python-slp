@@ -121,7 +121,6 @@ class Config(dict):
             raise Exception("No configuration file found for %s" % name)
 
         previous_milestone = {}
-        data["milestones"] = {1: previous_milestone}
         milestones = loadJson("milestones.json")
 
         for milestone in sorted(milestones, key=lambda m: m["height"]):
@@ -144,7 +143,7 @@ class Config(dict):
             else:
                 try:
                     height = [
-                        h for h in dict.__getitem__(self, "milestones", {})
+                        h for h in dict.__getitem__(self, "milestones")
                         if h <= height
                     ][-1]
                 except Exception:

@@ -1,10 +1,17 @@
 [
     {
+        "height": 1,
+        "denied tickers": [
+            "XQR", "BTC", "LTC", "BCH", "ETH", "EOS", "XRP", "USDT", "XMR",
+            "DASH", "ETC", "ARK"
+        ]
+    },
+    {
         "height": 17891337,
         "slp types": ["aslp1", "aslp2"],
         "slp fields": [
-            "tp", "id", "de", "qt", "sy", "na", "du", "no", "pa", "mi",
-            "ch", "dt"
+            "tp", "id", "de", "qt", "sy", "na", "du", "no", "pa", "mi", "ch",
+            "dt"
         ],
         "input types": {
             "GENESIS": 0, "BURN": 1, "MINT": 2, "SEND": 3, "PAUSE": 4,
@@ -12,7 +19,6 @@
             "AUTHMETA": 9, "ADDMETA": 10, "VOIDMETA": 11, "REVOKEMETA": 12,
             "CLONE": 13
         },
-        "denied tickers": [],
         "cost": {
             "aslp1": {
                 "GENESIS": 100000000
