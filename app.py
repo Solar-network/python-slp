@@ -16,23 +16,18 @@ from slp import sync, node, msg, dbapi
 
 
 def init(name, **overrides):
-    data = slp.loadJson(f"{name}.json")
-    if len(data) == 0:
-        slp.LOG.error("Missing JSON configuration file for %s", name)
-        raise Exception("No configuration file found for %s" % name)
-    slp.JSON.clear()
-    slp.JSON.update(dict(data, **overrides))
-    database_name = slp.JSON['database name']
+    slp.JSON.load(name, **overrides)
+    database_name = slp.JSON["database name"]
     slp.REGEXP = re.compile(slp.JSON["serialized regex"])
-    slp.INPUT_TYPES = slp.JSON.get("input types", {})
+    slp.INPUT_TYPES = slp.JSON.ask("input types")
     slp.TYPES_INPUT = dict([v, k] for k, v in slp.INPUT_TYPES.items())
     slp.PUBLIC_IP = req.GET.plain(peer="https://www.ipecho.net").get(
         "raw", slp.get_extern_ip()
     )
     # update validation field 'tp'
-    slp.VALIDATION["tp"] = lambda value: value in slp.JSON["input types"]
+    slp.VALIDATION["tp"] = lambda value: value in slp.INPUT_TYPES
     # create the SLPN global variables
-    for slp_type in slp.JSON.get("slp types"):
+    for slp_type in slp.JSON.ask("slp types"):
         setattr(slp, slp_type[1:].upper(), slp_type)
     # initialize logger
     # TODO: add log rotation parameters to slp.json

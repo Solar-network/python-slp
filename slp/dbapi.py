@@ -64,7 +64,7 @@ def add_reccord(
     """
     fields = dict(
         [k, v] for k, v in kw.items()
-        if k in slp.JSON["slp fields"]
+        if k in slp.JSON.ask("slp fields", height)
     )
 
     if kw.get("tp", "") == "GENESIS":

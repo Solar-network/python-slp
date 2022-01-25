@@ -39,7 +39,7 @@ class Processor(threading.Thread):
         peer = mark.get("peer", random.choice(peers))
         # determine where to start
         start_height = max(
-            min(slp.JSON["milestones"].values()),
+            min(slp.JSON["milestones"].keys()),
             mark.get("last parsed block", 0)
         )
         last_reccord = list(

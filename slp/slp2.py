@@ -93,7 +93,9 @@ def apply_genesis(contract, **options):
     tokenId = contract["id"]
     try:
         # blockchain transaction amount have to match GENESIS cost
-        assert contract["cost"] >= slp.JSON["GENESIS cost"][slp.SLP2]
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP2]["GENESIS"]
         # GENESIS contract have to be sent to master address
         assert contract["receiver"] == slp.JSON["master address"]
         # return True if assertion only asked (test if contract is valid)

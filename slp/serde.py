@@ -285,10 +285,11 @@ def pack_slp2(*args, **kwargs):
 
 def unpack_slp(smartbridge):
     slp_type, data = _match_smartbridge(smartbridge)
-    if slp_type not in slp.JSON["slp types"]:
+    slp_types = slp.JSON.ask("slp types")
+    if slp_type not in slp_types:
         raise Exception(
             "Expecting %s contract, not %s" % (
-                " or ".join(slp.JSON["slp types"]),
+                " or ".join(slp_types),
                 slp_type
             )
         )

@@ -289,7 +289,7 @@ def parse_block(block, peer=None):
                 fields["timestamp"] = timestamp + interval * int(index)
                 # compute token id for GENESIS contracts
                 if fields["tp"] == "GENESIS":
-                    if fields["sy"] in slp.JSON["denied tickers"]:
+                    if fields["sy"] in slp.JSON.ask("denied tickers"):
                         raise Exception(
                             "'%s' ticker is denied..." % fields["sy"]
                         )

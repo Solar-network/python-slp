@@ -37,7 +37,9 @@ def apply_genesis(contract, **options):
         # initial quantity should avoid decimal part
         assert contract["qt"] % 1 == 0
         # blockchain transaction amount have to match GENESIS cost
-        assert contract["cost"] >= slp.JSON["GENESIS cost"][slp.SLP1]
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP1]["GENESIS"]
         # GENESIS contract have to be sent to master address
         assert contract["receiver"] == slp.JSON["master address"]
         # return True if assertion only asked (test if contract is valid)
