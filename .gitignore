@@ -1,0 +1,8 @@
+*.pyc
+*.bak
+*.mark
+*.key
+*.service
+*.log*
+.db/
+.json/

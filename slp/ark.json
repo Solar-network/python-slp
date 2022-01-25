@@ -1,0 +1,53 @@
+{
+    "blocktime": 8,
+    "master address": "ARKQXzHvEWXgfCgAcJWJQKUMus5uE6Yckr",
+    "denied tickers": [],
+
+    "slp fields": "tp,id,de,qt,sy,na,du,no,pa,mi,ch,dt",
+    "slp types": ["aslp1", "aslp2"],
+
+    "input types": {
+        "GENESIS": 0,
+        "BURN": 1, "MINT": 2, "SEND": 3,
+        "PAUSE": 4, "RESUME": 5,
+        "NEWOWNER": 6,
+        "FREEZE": 7, "UNFREEZE": 8,
+        "AUTHMETA": 9, "ADDMETA": 10, "VOIDMETA": 11, "REVOKEMETA": 12,
+        "CLONE": 13
+    },
+
+    "serialized regex": "^(aslp[0-9]+)://(.*)$",
+
+    "GENESIS cost": {
+        "aslp1": 100000000,
+        "aslp2": 100000000
+    },
+
+    "milestones": {
+        "activation": {
+            "aslp1": 17891337,
+            "aslp2": 17891337
+        },
+        "cost": {
+            "default": 1,
+            "aslp1": {
+                "GENESIS": {
+                    "17891337": 100000000
+                }
+            },
+            "aslp2": {
+                "GENESIS": {
+                    "17891337": 100000000
+                }
+            }
+        },
+        "aslp1": 17891337,
+        "aslp2": 17891337
+    },
+
+    "database name": "aslp_database",
+    "webhook peer": "http://127.0.0.1:4004",
+    "api peer": "https://api.ark.io",
+
+    "log level": "INFO"
+}
