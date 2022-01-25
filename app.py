@@ -26,7 +26,7 @@ def init(name, **overrides):
     )
     # update validation field 'tp'
     slp.VALIDATION["tp"] = lambda value: value in slp.INPUT_TYPES
-    # create the SLPN global variables
+    # create the SLP[i] global variables
     for slp_type in slp.JSON.ask("slp types"):
         setattr(slp, slp_type[1:].upper(), slp_type)
     # initialize logger
