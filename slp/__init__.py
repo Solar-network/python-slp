@@ -102,7 +102,8 @@ def merge_milestone(a, b):
             if isinstance(v, dict):
                 merged[k].update(v)
             elif isinstance(v, list):
-                merged[k].extends(v)
+                merged[k].extend(v)
+                merged[k] = list(set(merged[k]))
             else:
                 merged[k] = v
         else:
@@ -115,10 +116,13 @@ class Config(dict):
     def load(self, name, **overrides):
 
         data = loadJson(f"{name}.json")
-        milestones = loadJson("milestones.json")
+        if len(data) == 0:
+            LOG.error("Missing JSON configuration file for %s", name)
+            raise Exception("No configuration file found for %s" % name)
 
         previous_milestone = {}
         data["milestones"] = {1: previous_milestone}
+        milestones = loadJson("milestones.json")
 
         for milestone in sorted(milestones, key=lambda m: m["height"]):
             height = milestone.pop("height")
@@ -131,11 +135,20 @@ class Config(dict):
         self.clear()
         self.update(dict(data, **overrides))
 
-    def get(self, key, height=1):
+    def ask(self, key, height=None):
         if key in self:
             return dict.__getitem__(self, key)
         else:
-            height = [h for h in self.get("milestones") if h <= height][-1]
+            if height is None:
+                height = max(dict.__getitem__(self, "milestones").keys())
+            else:
+                try:
+                    height = [
+                        h for h in dict.__getitem__(self, "milestones", {})
+                        if h <= height
+                    ][-1]
+                except Exception:
+                    raise Exception("value not found in milestones")
             return dict.__getitem__(self, "milestones").get(height, {})[key]
 
 
