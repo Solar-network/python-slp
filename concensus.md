@@ -1,17 +1,4 @@
 
-# SLP concensus
+# SLP crosschain POC
 
-The way SLP is designed allows fast state build from simple assertions on journal database. There is however one contract type which application can not be based on thoses assertions: STC or cross blockchain exchange.
-
-On SLP state computation, there are two possibilities about SLP network:
-
-  1. there is one slp node: it have to do all the checkings by itself
-  2. there are more than 5 slp node on a p2p network: it have to ask for a concensus
-
-## Applying STC contract on its own
-
-## Concensus within p2p network
-
-The node asks if STC contract is legit to all known peers. To avoid malicious answer, peers have to send `legit` value of the contract back with a hash of the wallet state at the asked STC blockstamp.
-
-The node can then filter all answers according to hash and apply the STC contract if the majority +1 is okay.
+[![](https://mermaid.ink/img/pako:eNqNks1qwzAQhF9l0TkxjfsfSg8m7amUgttT3cNGWifCttZIckNw8u5VHAcSN9D6IiN9M5od1ArJisRU5CWv5BKth_dZZiB8zeeHI_sF4_HjZhJBbblmRw6kZefGgdUG0pc3cFVQza1WC9pA2u62Xsmv2BYw2e6t0s4kjkCykWRc4wJ5fHR55O8tGofSazbgGZxemA00faaOvoq6XUCjYG4ZlUTnj3UbSNqkZFnsUx5iJJ36OoJvMorts6ZSgXZgCcNqYEXzJXMBCj0OAt5E-7lP0gUp1nWpSQ3o2wgMe52vf4sCGXcdmb6j-NBRDA877d3ZluLO9z4CdIWDKsxLtmsnTDK0P5FMLqIDvmMHWZL4bE-9dPLfpgZXxn-WFQRiJCqyFWoVXl-7M8iEX1JFmZiGX0U5NqXPRGa2AW3qcBU9Ke3ZimmOpaORwMZzujZSTL1t6ADNNC4sVj21_QHs6PQX)](https://mermaid.live/edit#pako:eNqNks1qwzAQhF9l0TkxjfsfSg8m7amUgttT3cNGWifCttZIckNw8u5VHAcSN9D6IiN9M5od1ArJisRU5CWv5BKth_dZZiB8zeeHI_sF4_HjZhJBbblmRw6kZefGgdUG0pc3cFVQza1WC9pA2u62Xsmv2BYw2e6t0s4kjkCykWRc4wJ5fHR55O8tGofSazbgGZxemA00faaOvoq6XUCjYG4ZlUTnj3UbSNqkZFnsUx5iJJ36OoJvMorts6ZSgXZgCcNqYEXzJXMBCj0OAt5E-7lP0gUp1nWpSQ3o2wgMe52vf4sCGXcdmb6j-NBRDA877d3ZluLO9z4CdIWDKsxLtmsnTDK0P5FMLqIDvmMHWZL4bE-9dPLfpgZXxn-WFQRiJCqyFWoVXl-7M8iEX1JFmZiGX0U5NqXPRGa2AW3qcBU9Ke3ZimmOpaORwMZzujZSTL1t6ADNNC4sVj21_QHs6PQX)
