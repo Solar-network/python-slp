@@ -3,31 +3,48 @@
 
  > Databases being built from journal, focus have to be done on slp journal.
 
-## Concensus arround journal proof of history
+## Concensus with journal proof of history
 
-User submits a contract proposition to a specific peer (requested peer) of SLP network. It will return a transaction to sign and broadcast if network concensus is reached.
+Each journal entry contains a `poh` (proof of history) computed as a md5 hash on concatenation of previous `poh` entry and md5 hash of current SLP contract fields.
 
-A concensus message is sent by a requested peer and has to reach a succession of N random peers or a succession of M validation. Once N or M is reach, message returns back to the requested peer.
+```python
+>>> previous_poh = "9996e575e3306735b3098605b8b1efba"
+>>> slp1 = {
+   "tp": "SEND",
+   "id": "8259ce077b1e767227e5e0fce590d26d",
+   "qt": 10,
+   "no": "Enjoy your bARK tokens!"
+}
+>>> seed = json.dumps(slp1, sort_keys=True, separators=(',', ':'))
+>>> seed = previous_poh + hashlib.md5(seed.encode("utf-8")).hexdigest()
+>>> hashlib.md5(seed.encode("utf-8")).hexdigest()
+'80cf37f037aa09900727f1cb876ee89e'
+```
+
+## SLP transaction
+
+Once user submited a contract proposition to a specific peer (requested peer), it will return a transaction to be signed and broadcasted if network concensus is reached.
+
+A concensus message is sent by a requested peer and has to reach a succession of N random peers.
 
 ### concensus flow
 
-  1. user sublit a SLP contract proposition to requested peer
+  1. user submit a SLP contract proposition to requested peer
   2. requested peer checks contract assertions
      - exit if at least one assertion is `False`
-  3. requested peer computes `hash(SLP contract)` and POH
+  3. requested peer computes `hash(SLP contract)` and `POH`
   4. requested peer generates concensus message and send it to a random peer
-     - message : `{"ip":<ip>, "height":<height>, "hash"<hash>, "poh":<POH>, "answers":[], "N":<N>, "M":<M>}`
+     - concensus message : `{"ip":<ip>, "height":<height>, "hash"<slp fields hash>, "N":<N>, "X":0}`
   5. on concensus message received :
-     + append `True` or `False` to `answers` according to contract assertions and computed POH
-     + if `len(answers) >= N` or `nb(true) in answers >= M` send back to requested peer ip else send message to a random peer
-  6. on concensus back to requested peer:
-     - compute a transaction to be signed by user if quorum is reach (`nb(True) >= M`)
+     + compute `POH`, and send it to requested peer with height and hash: `{"height":<height>, "hash"<slp fields hash>, "POH":<poh>}`
+     + if `X < N` increment X and forward to a random peer: `{"ip":<ip>, "height":<height>, "hash"<slp fields hash>, "N":<N>, "X":1}`
+     + requested peer increment valid POH count until quorum is reach
 
 # SLP crosschain POC
 
 ## Basic
 
-[![](https://mermaid.ink/img/pako:eNqNUs1PgzAU_1de6nWQUL85eCDTkzEm6Ek8dPRta4CWtMW5wP5332DoFjSxlzYvv8-Xtiw3ElnMlqXZ5GthPbzMMw10mrdXh_YdgjC466IQamtq49BBbo1zAYGVhvTxGVxFtIVVcoUdpO1-9IR-Y2wB0W7QSgcV_oeK_zyLwBtwaqU7aA7-EBDlPOynILSEhTVC5sL5CbmDpE1KkxfDaLRNeomLED5QS2MfFJYSlAOLgm4NG1ysjSlACi8o-knWy3AakaiirkuF8hhN4KsQKsqFFiLQxqvl9peIKe93ow-74eNueC9x_S3BwVHcyYY4leTHLUeBZBC4-W9N_uO7L3o7KcpPixKezViFthJK0ldp9_yM-TVWmLGYnlLYImOZ3hGuqckG76XyxrJ4KUqHMyYab9KtzlnsbYMjaK7EyorqgNp9AbHS1MM)](https://mermaid.live/edit/#pako:eNqNUs1PgzAU_1de6nWQUL85eCDTkzEm6Ek8dPRta4CWtMW5wP5332DoFjSxlzYvv8-Xtiw3ElnMlqXZ5GthPbzMMw10mrdXh_YdgjC466IQamtq49BBbo1zAYGVhvTxGVxFtIVVcoUdpO1-9IR-Y2wB0W7QSgcV_oeK_zyLwBtwaqU7aA7-EBDlPOynILSEhTVC5sL5CbmDpE1KkxfDaLRNeomLED5QS2MfFJYSlAOLgm4NG1ysjSlACi8o-knWy3AakaiirkuF8hhN4KsQKsqFFiLQxqvl9peIKe93ow-74eNueC9x_S3BwVHcyYY4leTHLUeBZBC4-W9N_uO7L3o7KcpPixKezViFthJK0ldp9_yM-TVWmLGYnlLYImOZ3hGuqckG76XyxrJ4KUqHMyYab9KtzlnsbYMjaK7EyorqgNp9AbHS1MM)
+[![](https://mermaid.ink/img/pako:eNqNkstOhDAUhl_lpG6FSL0T44KMrowxQVfiokMPMw3QkrY4TmDe3QKDwwRN7Ibm5L8cvrQhqeJIQpIVapOumbbwukgkuFO_vxnUH-D53n0b-FBpVSmDBlKtjPGcWEiIn17AlM621IKvsIW46UbPaDdK5xDshqx4SKF_pNivkwCsAiNWsoV63w-es5z7_RSY5LDUivGUGTsztxA1UaHSfBiNtVEfceHDJ0qu9KPAgoMwoJG5r4QNLtdK5cCZZW71o10v_fmKzsqqqhDIp2onvvKhdHuhhgCksiLb_rJiTHs2cs-Gjmwo3HUZ1z8ZFJjJIVUyRWlq05GZGoNDOe3bbyZO4_50Bpc6PnQKaOyOhoDb_xKih97-VZzNINFjSM5ATkmJumSCu2fWdAEJsWssMSGhu3LMWF3YhCRy56R15arwgQurNAkzVhg8Jay2Kt7KlIRW1ziKFoKtNCv3qt03hZfong)](https://mermaid.live/edit/#pako:eNqNkstOhDAUhl_lpG6FSL0T44KMrowxQVfiokMPMw3QkrY4TmDe3QKDwwRN7Ibm5L8cvrQhqeJIQpIVapOumbbwukgkuFO_vxnUH-D53n0b-FBpVSmDBlKtjPGcWEiIn17AlM621IKvsIW46UbPaDdK5xDshqx4SKF_pNivkwCsAiNWsoV63w-es5z7_RSY5LDUivGUGTsztxA1UaHSfBiNtVEfceHDJ0qu9KPAgoMwoJG5r4QNLtdK5cCZZW71o10v_fmKzsqqqhDIp2onvvKhdHuhhgCksiLb_rJiTHs2cs-Gjmwo3HUZ1z8ZFJjJIVUyRWlq05GZGoNDOe3bbyZO4_50Bpc6PnQKaOyOhoDb_xKih97-VZzNINFjSM5ATkmJumSCu2fWdAEJsWssMSGhu3LMWF3YhCRy56R15arwgQurNAkzVhg8Jay2Kt7KlIRW1ziKFoKtNCv3qt03hZfong)
 
 ## SLP master node
 
