@@ -12,13 +12,13 @@ Each journal entry contains a `poh` (proof of history) computed as a md5 hash on
 >>> slp1 = {
    "tp": "SEND",
    "id": "8259ce077b1e767227e5e0fce590d26d",
-   "qt": 10,
+   "qt": 10.0,
    "no": "Enjoy your bARK tokens!"
 }
 >>> seed = json.dumps(slp1, sort_keys=True, separators=(',', ':'))
 >>> seed = previous_poh + hashlib.md5(seed.encode("utf-8")).hexdigest()
 >>> hashlib.md5(seed.encode("utf-8")).hexdigest()
-'80cf37f037aa09900727f1cb876ee89e'
+'04fbeeb813a5b1bee8fefa8735e196fb'
 ```
 
 ## SLP transaction
@@ -37,7 +37,7 @@ A consensus message is sent by a requested peer and has to reach a succession of
      - consensus message : `{"origin":<peer address>, "blockstamp":<bockstamp>, "hash"<slp fields hash>, "n":<N>, "x":0}`
   5. on consensus message received :
      + compute `POH`, and send it to requested peer with height and hash: `{"blockstamp":<blockstamp>, "POH":<poh>}`
-     + if `x < n` increment X and forward to a random peer: `{"ip":<ip>, "height":<height>, "hash"<slp fields hash>, "n":<N>, "x":1}`
+     + if `x < n` increment X and forward to a random peer: `{"origin":<peer address>, "blockstamp":<bockstamp>, "hash"<slp fields hash>, "n":<N>, "x":1}`
   6. requested peer increment valid POH count until quorum is reach
 
 # SLP crosschain POC
