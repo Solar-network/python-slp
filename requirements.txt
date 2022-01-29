@@ -1,2 +1,2 @@
-git+https://github.com/Moustikitos/micro-server#egg=usrv
 pymongo
+git+https://github.com/Moustikitos/micro-server#egg=usrv

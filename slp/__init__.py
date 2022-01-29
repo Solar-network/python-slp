@@ -126,9 +126,7 @@ class Config(dict):
 
         for milestone in sorted(milestones, key=lambda m: m["height"]):
             height = milestone.pop("height")
-            milestone = merge_milestone(
-                previous_milestone, milestone
-            )
+            milestone = merge_milestone(previous_milestone, milestone)
             data["milestones"][height] = milestone
             previous_milestone = milestone
 

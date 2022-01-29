@@ -70,7 +70,7 @@ def apply_genesis(contract, **options):
                     owner=contract["emitter"], globalSupply=globalSupply,
                     document=contract["du"], notes=contract.get("no", None),
                     paused=False, minted=minted, burned=_decimal128(0.),
-                    exited=_decimal128(0.)
+                    crossed=_decimal128(0.)
                 )
             ),
             dbapi.db.slp1.insert_one(
@@ -173,7 +173,7 @@ def apply_mint(contract, **options):
         # owner may mint accourding to global supply limit
         current_supply = (
             token["burned"].to_decimal() + token["minted"].to_decimal() +
-            token["exited"].to_decimal()
+            token["crossed"].to_decimal()
         )
         allowed_supply = token["globalSupply"].to_decimal()
         assert current_supply + contract["qt"] <= allowed_supply
