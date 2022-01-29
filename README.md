@@ -1,5 +1,9 @@
 **Side Ledger Protocol**
 
+<p align="center">
+	<img src="./banner.jpg?sanitize=true" />
+</p>
+
 # Run python-slp node
 
 First [install Mongo DB](https://docs.mongodb.com/manual/tutorial/#installation) and run the mongodb service:
