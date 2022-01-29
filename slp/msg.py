@@ -114,16 +114,14 @@ class Messenger(threading.Thread):
                             )
                     else:
                         msg = request.get("data", {})
-                        headers = request.get("headers", {})
+                        # headers = request.get("headers", {})
                         slp.LOG.info("Performing message: %r", msg)
                         if "hello" in msg:
                             resp = node.manage_hello(msg)
                         if "consensus" in msg:
                             resp = node.manage_consensus(msg)
                         if "consent" in msg:
-                            resp = node.Consensus.increment(
-                                msg["consent"]["poh"]
-                            )
+                            resp = node.Consensus.update(**msg["consent"])
                 else:
                     slp.LOG.info("Messenger %s clean exit", id(self))
             except Exception as error:

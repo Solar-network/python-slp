@@ -26,22 +26,27 @@ def send_message(msg, *peers):
 
 
 def bind_callback(reccord, func, *args, **kwargs):
+    """
+    Create a bound between python function and a consensus on reccord validity.
+    """
+    # get valid slp fields from milestone
     height = reccord["height"]
-    index = reccord["index"]
-
     slp_fields = slp.JSON.ask("slp fields", height=height)
+    # filter reccord to extract slp fields only for poh computation and create
+    # consensus object
     fields = dict([k, v] for k, v in reccord.items() if k in slp_fields)
-    poh = dbapi.compute_poh("journal", **fields)
-    Consensus(poh, func, *args, **kwargs).push()
-
+    Consensus(
+        dbapi.compute_poh("journal", **fields), func, *args, **kwargs
+    ).push()
+    # compute slp fields hash
     seed = json.dumps(fields, sort_keys=True, separators=(',', ':'))
     seed = seed.encode("utf-8")
     msg = {
         "consensus": {
             "origin": f"http://{slp.PUBLIC_IP}:{slp.PORT}",
-            "blockstamp": f"{height}#{index}",
+            "blockstamp": f"{height}#{reccord['index']}",
             "hash": hashlib.md5(seed).hexdigest(),
-            "poh": poh, "n": len(PEERS), "x": 0
+            "n": len(PEERS), "x": 0
         }
     }
 
@@ -128,29 +133,31 @@ class Consensus:
     JOB = {}
 
     def __init__(self, poh, func, *args, **kwargs):
+        self.responses = 0
         self.quorum = 0
         self.poh = poh
         self.func = func
         self.args = args
         self.kwwargs = kwargs
 
-    def push(self):
+    def push(self, blockstamp):
         with Consensus.MUTEX:
-            Consensus.JOB[self.poh] = self
+            Consensus.JOB[blockstamp] = self
 
     @staticmethod
-    def get(poh):
+    def update(blockstamp, poh):
+        if blockstamp not in Consensus.JOB:
+            raise Exception(
+                "no concesus initialized at blockstamp %s" % blockstamp
+            )
         with Consensus.MUTEX:
-            return Consensus.JOB.pop(poh)
-
-    @staticmethod
-    def increment(poh):
-        if poh not in Consensus.JOB:
-            raise Exception("no concesus initialized with poh %s" % poh)
-        with Consensus.MUTEX:
-            Consensus.JOB[poh].quorum += 1
-            if Consensus.JOB[poh].quorum > math.ceil(len(PEERS) / 2.):
-                return Consensus.get("poh").trigger()
+            Consensus.JOB[blockstamp].response += 1
+            if Consensus.JOB[blockstamp].poh == poh:
+                Consensus.JOB[blockstamp].quorum += 1
+            if Consensus.JOB[blockstamp].quorum >= math.ceil(len(PEERS) / 2.):
+                return Consensus.JOB.pop(blockstamp).trigger()
+            elif Consensus.JOB[blockstamp].response >= len(PEERS):
+                del Consensus.JOB[blockstamp]
 
     def trigger(self):
         return self.func(*self.args, *self.kwargs)
