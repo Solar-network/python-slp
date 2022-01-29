@@ -2,8 +2,10 @@
 
 import slp
 import math
+import json
 import queue
 import random
+import hashlib
 import threading
 import traceback
 
@@ -21,6 +23,31 @@ def send_message(msg, *peers):
     Post message to `/message` endpoints from a peer selection.
     """
     return Broadcaster.broadcast(req.POST.message, msg, *peers or PEERS)
+
+
+def bind_callback(reccord, func, *args, **kwargs):
+    height = reccord["height"]
+    index = reccord["index"]
+
+    slp_fields = slp.JSON.ask("slp fields", height=height)
+    fields = dict([k, v] for k, v in reccord.items() if k in slp_fields)
+    poh = dbapi.compute_poh("journal", **fields)
+    Consensus(poh, func, *args, **kwargs).push()
+
+    seed = json.dumps(fields, sort_keys=True, separators=(',', ':'))
+    seed = seed.encode("utf-8")
+    msg = {
+        "consensus": {
+            "origin": f"http://{slp.PUBLIC_IP}:{slp.PORT}",
+            "blockstamp": f"{height}#{index}",
+            "hash": hashlib.md5(seed).hexdigest(),
+            "poh": poh, "n": len(PEERS), "x": 0
+        }
+    }
+
+    resp = {}
+    while not resp.get("queued", False):
+        resp = send_message(msg, random.choice(PEERS))
 
 
 def manage_hello(msg):
@@ -107,10 +134,9 @@ class Consensus:
         self.args = args
         self.kwwargs = kwargs
 
-    @staticmethod
-    def push(cls):
+    def push(self):
         with Consensus.MUTEX:
-            Consensus.JOB[cls.poh] = cls
+            Consensus.JOB[self.poh] = self
 
     @staticmethod
     def get(poh):
