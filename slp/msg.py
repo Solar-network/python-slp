@@ -118,6 +118,8 @@ class Messenger(threading.Thread):
                         slp.LOG.info("Performing message: %r", msg)
                         if "hello" in msg:
                             node.manage_hello(msg)
+                        if "consensus" in msg:
+                            node.manage_consensus(msg)
                 else:
                     slp.LOG.info("Messenger %s clean exit", id(self))
             except Exception as error:

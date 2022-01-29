@@ -31,14 +31,19 @@ def blockstamp_cmp(a, b):
         return False
 
 
-def compute_poh(name, **data):
+def compute_poh(name, last_poh=None, **data):
     collection = getattr(db, name)
-    try:
-        last_poh = collection.find().sort("_id", -1)[0].get("poh", "")
-    except Exception:
-        last_poh = ""
-    seed = json.dumps(data, sort_keys=True, separators=(',', ':'))
-    seed = last_poh + hashlib.md5(seed.encode("utf-8")).hexdigest()
+    if last_poh is None:
+        try:
+            last_poh = collection.find().sort("_id", -1)[0].get("poh", "")
+        except Exception:
+            last_poh = ""
+    if "hash" not in data:
+        seed = json.dumps(data, sort_keys=True, separators=(',', ':'))
+        seed = hashlib.md5(seed.encode("utf-8")).hexdigest()
+    else:
+        seed = data["hash"]
+    seed = last_poh + seed
     return hashlib.md5(seed.encode("utf-8")).hexdigest()
 
 
@@ -120,7 +125,7 @@ def update_contract(tokenId, values):
         update = {"$set": dict(
             [k, v] for k, v in values.items()
             if k in "tokenId,height,index,type,name,owner,"
-                    "globalSupply,paused,minted,burned"
+                    "globalSupply,paused,minted,burned,crossed"
         )}
         db.contracts.update_one(query, update)
     except Exception as error:

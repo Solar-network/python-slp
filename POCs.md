@@ -1,9 +1,9 @@
 
-# SLP concensus
+# SLP consensus
 
  > Databases being built from journal, focus have to be done on slp journal.
 
-## Concensus with journal proof of history
+## Consensus with journal proof of history
 
 Each journal entry contains a `poh` (proof of history) computed as a md5 hash on concatenation of previous `poh` entry and md5 hash of current SLP contract fields.
 
@@ -23,22 +23,22 @@ Each journal entry contains a `poh` (proof of history) computed as a md5 hash on
 
 ## SLP transaction
 
-Once user submited a contract proposition to a specific peer (requested peer), it will return a transaction to be signed and broadcasted if network concensus is reached.
+Once user submited a contract proposition to a specific peer (requested peer), it will return a transaction to be signed and broadcasted if network consensus is reached.
 
-A concensus message is sent by a requested peer and has to reach a succession of N random peers.
+A consensus message is sent by a requested peer and has to reach a succession of N random peers.
 
-### concensus flow
+### consensus flow
 
   1. user submit a SLP contract proposition to requested peer
   2. requested peer checks contract assertions
      - exit if at least one assertion is `False`
   3. requested peer computes `hash(SLP contract)` and `POH`
-  4. requested peer generates concensus message and send it to a random peer
-     - concensus message : `{"ip":<ip>, "height":<height>, "hash"<slp fields hash>, "N":<N>, "X":0}`
-  5. on concensus message received :
-     + compute `POH`, and send it to requested peer with height and hash: `{"height":<height>, "hash"<slp fields hash>, "POH":<poh>}`
-     + if `X < N` increment X and forward to a random peer: `{"ip":<ip>, "height":<height>, "hash"<slp fields hash>, "N":<N>, "X":1}`
-     + requested peer increment valid POH count until quorum is reach
+  4. requested peer generates consensus message and send it to a random peer
+     - consensus message : `{"origin":<peer address>, "blockstamp":<bockstamp>, "hash"<slp fields hash>, "n":<N>, "x":0}`
+  5. on consensus message received :
+     + compute `POH`, and send it to requested peer with height and hash: `{"blockstamp":<blockstamp>, "POH":<poh>}`
+     + if `x < n` increment X and forward to a random peer: `{"ip":<ip>, "height":<height>, "hash"<slp fields hash>, "n":<N>, "x":1}`
+  6. requested peer increment valid POH count until quorum is reach
 
 # SLP crosschain POC
 
