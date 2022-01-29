@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 
 import slp
+import math
 import queue
 import random
 import threading
@@ -92,6 +93,41 @@ def prospect_peers(*peers):
                 discovery(peer, me)
             # recursively prospect unknown peers from here
             prospect_peers(*(peer_s_peer - PEERS))
+
+
+class Consensus:
+
+    MUTEX = threading.Lock()
+    JOB = {}
+
+    def __init__(self, poh, func, *args, **kwargs):
+        self.quorum = 0
+        self.poh = poh
+        self.func = func
+        self.args = args
+        self.kwwargs = kwargs
+
+    @staticmethod
+    def push(cls):
+        with Consensus.MUTEX:
+            Consensus.JOB[cls.poh] = cls
+
+    @staticmethod
+    def get(poh):
+        with Consensus.MUTEX:
+            return Consensus.JOB.pop(poh)
+
+    @staticmethod
+    def increment(poh):
+        if poh not in Consensus.JOB:
+            raise Exception("no concesus initialized with poh %s" % poh)
+        with Consensus.MUTEX:
+            Consensus.JOB[poh].quorum += 1
+            if Consensus.JOB[poh].quorum > math.ceil(len(PEERS) / 2.):
+                return Consensus.get("poh").trigger()
+
+    def trigger(self):
+        return self.func(*self.args, *self.kwargs)
 
 
 class Broadcaster(threading.Thread):
