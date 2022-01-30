@@ -53,9 +53,7 @@ def bind_callback(reccord, func, *args, **kwargs):
 
     resp = {}
     while not resp.get("queued", False):
-        resp = req.POST.message(
-            _jsonify=msg, peer=random.choice(list(PEERS))
-        )
+        resp = req.POST.message(_jsonify=msg, peer=random.choice(list(PEERS)))
 
 
 def manage_hello(msg):
@@ -73,14 +71,21 @@ def manage_consensus(msg):
     # if reccord is not found, journal is not sync so forward message to a
     # random peer
     if reccord is None:
-        forward = True
+        msg["consensus"]["x"] += 1
+        forward = msg["consensus"]["x"] < msg["consensus"]["n"]
     else:
         # compute poh from asked reccord and send it to requester peer
         poh = dbapi.compute_poh(
             "journal", reccord.get("poh", ""), **msg["consensus"]
         )
         send_message(
-            {"consent": {"blockstamp": blockstamp, "poh": poh}},
+            {
+                "consent": {
+                    "blockstamp": blockstamp,
+                    "poh": poh,
+                    "#": msg["consensus"]["x"]
+                }
+            },
             msg["consensus"]["origin"]
         )
         # then increment the x value and forward message if needed
@@ -89,11 +94,10 @@ def manage_consensus(msg):
             forward = True
     # if forward needed, send consensus message to a random peer
     if forward:
+        peers = list(PEERS - set([msg["consensus"]["origin"]]))
         resp = {}
         while not resp.get("queued", False):
-            resp = req.POST.message(
-                _jsonify=msg, peer=random.choice(list(PEERS))
-            )
+            resp = req.POST.message(_jsonify=msg, peer=random.choice(peers))
 
 
 def discovery(*peers, peer=None):
@@ -117,7 +121,7 @@ def prospect_peers(*peers):
     slp.LOG.debug("prospecting %s peers", len(peers))
     me = f"http://{slp.PUBLIC_IP}:{slp.PORT}"
     # for all new peer
-    for peer in set(peers) - set([me]) - PEERS:
+    for peer in set(peers) - set([me]): # - PEERS:
         # ask peer's peer list
         resp = req.GET.peers(peer=peer)
         # if it answerd
@@ -127,7 +131,7 @@ def prospect_peers(*peers):
             peer_s_peer = set(resp)
             # if peer is missing some known peer from here
             if len(PEERS - peer_s_peer):
-                discovery(peer, me)
+                discovery(peer, peer=me)
             # recursively prospect unknown peers from here
             prospect_peers(*(peer_s_peer - PEERS))
 
@@ -152,9 +156,10 @@ class Consensus:
     @staticmethod
     def update(blockstamp, poh):
         if blockstamp not in Consensus.JOB:
-            raise Exception(
+            slp.LOG.info(
                 "no concesus initialized at blockstamp %s" % blockstamp
             )
+            return
         with Consensus.MUTEX:
             Consensus.JOB[blockstamp].responses += 1
             if Consensus.JOB[blockstamp].poh == poh:

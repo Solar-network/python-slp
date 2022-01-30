@@ -121,6 +121,7 @@ class Messenger(threading.Thread):
                         if "consensus" in msg:
                             resp = node.manage_consensus(msg)
                         if "consent" in msg:
+                            msg["consent"].pop("#", None)
                             resp = node.Consensus.update(**msg["consent"])
                 else:
                     slp.LOG.info("Messenger %s clean exit", id(self))
