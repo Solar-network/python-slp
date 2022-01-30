@@ -167,11 +167,12 @@ if __name__ == "__main__":
         help="port to use                [default: slp default port]"
     )
 
+    init("ark")
+
     (options, args) = parser.parse_args()
     slp.PUBLIC_IP = options.host
     slp.PORT = options.port
 
-    init("ark")
     msg.Messenger()
     node.Broadcaster()
 
