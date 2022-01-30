@@ -31,20 +31,21 @@ def bind_callback(reccord, func, *args, **kwargs):
     """
     # get valid slp fields from milestone
     height = reccord["height"]
+    blockstamp = f"{height}#{reccord['index']}"
     slp_fields = slp.JSON.ask("slp fields", height=height)
     # filter reccord to extract slp fields only for poh computation and create
     # consensus object
     fields = dict([k, v] for k, v in reccord.items() if k in slp_fields)
     Consensus(
         dbapi.compute_poh("journal", **fields), func, *args, **kwargs
-    ).push()
+    ).push(blockstamp)
     # compute slp fields hash
     seed = json.dumps(fields, sort_keys=True, separators=(',', ':'))
     seed = seed.encode("utf-8")
     msg = {
         "consensus": {
             "origin": f"http://{slp.PUBLIC_IP}:{slp.PORT}",
-            "blockstamp": f"{height}#{reccord['index']}",
+            "blockstamp": blockstamp,
             "hash": hashlib.md5(seed).hexdigest(),
             "n": len(PEERS), "x": 0
         }
@@ -52,7 +53,9 @@ def bind_callback(reccord, func, *args, **kwargs):
 
     resp = {}
     while not resp.get("queued", False):
-        resp = send_message(msg, random.choice(PEERS))
+        resp = req.POST.message(
+            _jsonify=msg, peer=random.choice(list(PEERS))
+        )
 
 
 def manage_hello(msg):
@@ -72,7 +75,7 @@ def manage_consensus(msg):
     if reccord is None:
         forward = True
     else:
-        # compute poh from asked reccord and send it to requster peer
+        # compute poh from asked reccord and send it to requester peer
         poh = dbapi.compute_poh(
             "journal", reccord.get("poh", ""), **msg["consensus"]
         )
@@ -88,7 +91,9 @@ def manage_consensus(msg):
     if forward:
         resp = {}
         while not resp.get("queued", False):
-            resp = send_message(msg, random.choice(PEERS))
+            resp = req.POST.message(
+                _jsonify=msg, peer=random.choice(list(PEERS))
+            )
 
 
 def discovery(*peers, peer=None):
@@ -116,10 +121,10 @@ def prospect_peers(*peers):
         # ask peer's peer list
         resp = req.GET.peers(peer=peer)
         # if it answerd
-        if resp.get("status", -1) == 200:
+        if isinstance(resp, list):
             # add peer to peerlist and prospect peer's peer list
             PEERS.update([peer])
-            peer_s_peer = set(resp.get("result", []))
+            peer_s_peer = set(resp)
             # if peer is missing some known peer from here
             if len(PEERS - peer_s_peer):
                 discovery(peer, me)
@@ -138,7 +143,7 @@ class Consensus:
         self.poh = poh
         self.func = func
         self.args = args
-        self.kwwargs = kwargs
+        self.kwargs = kwargs
 
     def push(self, blockstamp):
         with Consensus.MUTEX:
@@ -151,12 +156,12 @@ class Consensus:
                 "no concesus initialized at blockstamp %s" % blockstamp
             )
         with Consensus.MUTEX:
-            Consensus.JOB[blockstamp].response += 1
+            Consensus.JOB[blockstamp].responses += 1
             if Consensus.JOB[blockstamp].poh == poh:
                 Consensus.JOB[blockstamp].quorum += 1
             if Consensus.JOB[blockstamp].quorum >= math.ceil(len(PEERS) / 2.):
                 return Consensus.JOB.pop(blockstamp).trigger()
-            elif Consensus.JOB[blockstamp].response >= len(PEERS):
+            elif Consensus.JOB[blockstamp].responses >= len(PEERS):
                 del Consensus.JOB[blockstamp]
 
     def trigger(self):
@@ -193,7 +198,9 @@ class Broadcaster(threading.Thread):
                 endpoint, msg, *peers = Broadcaster.JOB.get()
                 if isinstance(endpoint, req.EndPoint):
                     for peer in peers or PEERS:
-                        endpoint(peer=peer, _jsonify=msg)
+                        slp.LOG.info(
+                            "%s", endpoint(peer=peer, _jsonify=msg)
+                        )
                 else:
                     slp.LOG.info("Broadcaster %s clean exit", id(self))
             except Exception as error:
