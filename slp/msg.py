@@ -11,7 +11,7 @@ from slp import node, chain, sync
 from usrv import srv
 
 
-@srv.bind("/blocks", methods=["POST"])
+@srv.bind("/blocks", methods=["POST"], app=srv.uJsonHandler)
 def listen_blockchain(**request):
     """
     Endpoint used to listen webhook data from `chain.subscribe` action. It
@@ -23,14 +23,14 @@ def listen_blockchain(**request):
 
 
 # listen requests to /message endpoint
-@srv.bind("/message", methods=["HEAD", "POST"])
+@srv.bind("/message", methods=["HEAD", "POST"], app=srv.uJsonHandler)
 def manage_message(**request):
     if request["method"] == "POST":
         return {"queued": Messenger.put(request)}
 
 
 # listen requests to /peers endpoint
-@srv.bind("/peers", methods=["GET"])
+@srv.bind("/peers", methods=["GET"], app=srv.uJsonHandler)
 def send_peers(**request):
     if request["method"] == "GET":
         return list(node.PEERS)
