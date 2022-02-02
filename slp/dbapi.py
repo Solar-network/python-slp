@@ -33,18 +33,20 @@ def blockstamp_cmp(a, b):
 
 def compute_poh(name, last_poh=None, **data):
     collection = getattr(db, name)
+    # if no previous poh given, get last from journal
     if last_poh is None:
         try:
             last_poh = collection.find().sort("_id", -1)[0].get("poh", "")
         except Exception:
             last_poh = ""
+    # data could be slp fields or consent message containing slp fields hash
     if "hash" not in data:
         seed = json.dumps(data, sort_keys=True, separators=(',', ':'))
-        seed = hashlib.md5(seed.encode("utf-8")).hexdigest()
+        seed = hashlib.sha256(seed.encode("utf-8")).hexdigest()
     else:
         seed = data["hash"]
     seed = last_poh + seed
-    return hashlib.md5(seed.encode("utf-8")).hexdigest()
+    return hashlib.sha256(seed.encode("utf-8")).hexdigest()
 
 
 def add_reccord(

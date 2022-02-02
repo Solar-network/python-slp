@@ -55,6 +55,8 @@ class Memory(queue.Queue):
                     self.get()
                 queue.Queue.put(self, item_h, block, timeout)
                 return True
+            else:
+                slp.LOG.info("messenger memory did not agree...")
 
     @staticmethod
     def hash_item(item):
@@ -121,8 +123,9 @@ class Messenger(threading.Thread):
                         if "consensus" in msg:
                             resp = node.manage_consensus(msg)
                         if "consent" in msg:
-                            msg["consent"].pop("#", None)
+                            n = msg["consent"].pop("#", None)
                             resp = node.Consensus.update(**msg["consent"])
+                            slp.LOG.info("%r #%s: %s", msg, n, resp)
                 else:
                     slp.LOG.info("Messenger %s clean exit", id(self))
             except Exception as error:

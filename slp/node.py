@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 
+import os
 import slp
 import math
 import json
@@ -46,14 +47,11 @@ def bind_callback(reccord, func, *args, **kwargs):
         "consensus": {
             "origin": f"http://{slp.PUBLIC_IP}:{slp.PORT}",
             "blockstamp": blockstamp,
-            "hash": hashlib.md5(seed).hexdigest(),
-            "n": len(PEERS), "x": 0
+            "hash": hashlib.sha256(seed).hexdigest(),
+            # "n": len(PEERS), "x": 0
         }
     }
-
-    resp = {}
-    while not resp.get("queued", False):
-        resp = req.POST.message(_jsonify=msg, peer=random.choice(list(PEERS)))
+    return send_message(msg)
 
 
 def manage_hello(msg):
@@ -62,18 +60,12 @@ def manage_hello(msg):
 
 
 def manage_consensus(msg):
-    # forward is a flag to be set to True if quorum not reached
-    forward = False
     # get consensus data
     blockstamp = msg["consensus"]["blockstamp"]
     height, index = [int(e) for e in blockstamp.split("#")]
     reccord = dbapi.find_reccord(height=height, index=index)
-    # if reccord is not found, journal is not sync so forward message to a
-    # random peer
-    if reccord is None:
-        msg["consensus"]["x"] += 1
-        forward = msg["consensus"]["x"] < msg["consensus"]["n"]
-    else:
+
+    if reccord is not None:
         # compute poh from asked reccord and send it to requester peer
         poh = dbapi.compute_poh(
             "journal", reccord.get("poh", ""), **msg["consensus"]
@@ -83,21 +75,11 @@ def manage_consensus(msg):
                 "consent": {
                     "blockstamp": blockstamp,
                     "poh": poh,
-                    "#": msg["consensus"]["x"]
+                    "#": os.urandom(32).hex() # msg["consensus"]["x"]
                 }
             },
             msg["consensus"]["origin"]
         )
-        # then increment the x value and forward message if needed
-        msg["consensus"]["x"] += 1
-        if msg["consensus"]["x"] < msg["consensus"]["n"]:
-            forward = True
-    # if forward needed, send consensus message to a random peer
-    if forward:
-        peers = list(PEERS - set([msg["consensus"]["origin"]]))
-        resp = {}
-        while not resp.get("queued", False):
-            resp = req.POST.message(_jsonify=msg, peer=random.choice(peers))
 
 
 def discovery(*peers, peer=None):
@@ -121,7 +103,7 @@ def prospect_peers(*peers):
     slp.LOG.debug("prospecting %s peers", len(peers))
     me = f"http://{slp.PUBLIC_IP}:{slp.PORT}"
     # for all new peer
-    for peer in set(peers) - set([me]): # - PEERS:
+    for peer in set(peers) - set([me]):
         # ask peer's peer list
         resp = req.GET.peers(peer=peer)
         # if it answerd
@@ -142,8 +124,8 @@ class Consensus:
     JOB = {}
 
     def __init__(self, poh, func, *args, **kwargs):
-        self.responses = 0
         self.quorum = 0
+        self.aim = math.ceil(len(PEERS) / 2.)
         self.poh = poh
         self.func = func
         self.args = args
@@ -151,6 +133,7 @@ class Consensus:
 
     def push(self, blockstamp):
         with Consensus.MUTEX:
+            self._blockstamp = blockstamp
             Consensus.JOB[blockstamp] = self
 
     @staticmethod
@@ -159,18 +142,22 @@ class Consensus:
             slp.LOG.info(
                 "no concesus initialized at blockstamp %s" % blockstamp
             )
-            return
+            return None
         with Consensus.MUTEX:
-            Consensus.JOB[blockstamp].responses += 1
-            if Consensus.JOB[blockstamp].poh == poh:
-                Consensus.JOB[blockstamp].quorum += 1
-            if Consensus.JOB[blockstamp].quorum >= math.ceil(len(PEERS) / 2.):
+            Consensus.JOB[blockstamp].quorum += (
+                1 if Consensus.JOB[blockstamp].poh == poh else 0
+            )
+            if Consensus.JOB[blockstamp].quorum >= \
+               Consensus.JOB[blockstamp].aim:
                 return Consensus.JOB.pop(blockstamp).trigger()
-            elif Consensus.JOB[blockstamp].responses >= len(PEERS):
-                del Consensus.JOB[blockstamp]
+                return True
+            else:
+                return False
 
     def trigger(self):
-        return self.func(*self.args, *self.kwargs)
+        result = self.func(*self.args, *self.kwargs)
+        del Consensus.JOB[self._blockstamp]
+        return result or "[triggered]"
 
 
 class Broadcaster(threading.Thread):
