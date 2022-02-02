@@ -15,14 +15,14 @@ from usrv import srv
 from slp import dbapi, serde
 from pymongo import MongoClient
 
-DECIMAL128_FIELDS = "balance,minted,burned,exited,globalSupply".split(",")
-OPERATOR_FIELDS = "balance,minted,burned,exited,globalSupply,qt".split(",")
+DECIMAL128_FIELDS = "balance,minted,burned,crossed,globalSupply".split(",")
+OPERATOR_FIELDS = "balance,minted,burned,crossed,globalSupply,qt".split(",")
 SEARCH_FIELDS = "address,tokenId,blockStamp,owner,frozen," \
                 "slp_type,emitter,receiver,legit,tp,sy,id,pa,mi," \
                 "height,index,type,paused,symbol".split(",")
 
 
-@srv.bind("/<str:collection>/find", methods=["GET"])
+@srv.bind("/<str:collection>/find", methods=["GET"], app=srv.uJsonHandler)
 def find(collection, **kw):
     try:
         # get collection
@@ -172,3 +172,7 @@ class SlpApi(srv.uJsonApp):
     @staticmethod
     def kill(*args, **kwargs):
         pass
+
+
+# TODO: https://aslp.qredit.dev
+# TODO: https://github.com/Qredit/qslp/blob/ark/public/aslp_openapi3.yaml
