@@ -38,7 +38,7 @@ sudo systemctl enable slp.service
 
 ## Custom deployment
 
-`python-slp` is configured for `Ark` blockchain on port 5200 and 5100. To deploy node and api with a specific `Ark-fork`, copy `ark.json` to `name.json` in package directory where `name` is the name of the targeted blockchain. Then edit created json file accordingly and deploy:
+`python-slp` is configured on port 5200 and 5100. To deploy node and api with a specific `Ark-fork`, edit `.json` files in package directory according to  the targeted blockchain and deploy:
 
 ```sh
 python -c "import app;app.deploy(host='127.0.0.1', port=5243, blockchain='name')"
@@ -116,12 +116,12 @@ curl http://127.0.0.1:5100/slp2/find?tokenId=0c1b5ed5cff799a0dee2cadc6d02ac60
 # Releases
 
 ## current work
+  - [x] `ubuntu` install script
+  - [x] full SLP1 contract execution
   - [x] full SLP2 contract execution
   - [x] SIGTEMR securely handled
   - [x] run slp API separately
-  - [x] `ubuntu` install script
   - [x] blockchain syncer
-  - [x] full SLP1 contract execution
   - [x] mongo db api
   - [ ] TODO:
     - [ ] test suite
