@@ -1,9 +1,0 @@
-{
-    "blocktime": 8,
-    "master address": "ARKQXzHvEWXgfCgAcJWJQKUMus5uE6Yckr",
-    "database name": "aslp_database",
-    "serialized regex": "^(aslp[0-9]+)://(.*)$",
-    "webhook peer": "http://127.0.0.1:4004",
-    "api peer": "https://api.ark.io",
-    "log level": "DEBUG"
-}

@@ -1,0 +1,9 @@
+{
+    "blocktime": 8,
+    "master address": "DCJGEVjt2aF2zF3QWsALUYUEqnJ686FpQ6",
+    "database name": "sslp_database",
+    "serialized regex": "^(sslp[0-9]+)://(.*)$",
+    "webhook peer": "http://127.0.0.1:4004",
+    "api peer": "https://sxp.testnet.sh",
+    "log level": "DEBUG"
+}

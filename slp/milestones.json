@@ -7,8 +7,8 @@
         ]
     },
     {
-        "height": 17891337,
-        "slp types": ["aslp1", "aslp2"],
+        "height": 400000,
+        "slp types": ["sslp1", "sslp2"],
         "slp fields": [
             "tp", "id", "de", "qt", "sy", "na", "du", "no", "pa", "mi", "ch",
             "dt"
@@ -20,10 +20,10 @@
             "CLONE": 13
         },
         "cost": {
-            "aslp1": {
+            "sslp1": {
                 "GENESIS": 100000000
             },
-            "aslp2": {
+            "sslp2": {
                 "GENESIS": 100000000
             }
         }
