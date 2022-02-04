@@ -6,7 +6,7 @@ GITREPO="https://github.com/Moustikitos/python-slp.git"
 clear
 
 if [ $# = 0 ]; then
-    B="master"
+    B="sxp-devnet"
 else
     B=$1
 fi
@@ -33,11 +33,12 @@ else
     cd ~/python-slp
     git reset --hard
     git fetch --all
-    if [ "$B" == "master" ]; then
-        git checkout $B -f
-    else
-        git checkout tags/$B -f
-    fi
+    git checkout $B -f
+    # if [ "$B" == "master" ]; then
+    #     git checkout $B -f
+    # else
+    #     git checkout tags/$B -f
+    # fi
     git pull
 fi
 
@@ -74,8 +75,8 @@ echo "done"
 echo
 echo deploying node and api
 echo ======================
-python -c "import app;app.deploy(host='127.0.0.1', port=5200, blockchain='ark')"
-python -c "import slp.api;slp.api.deploy(host='127.0.0.1', port=5100, blockchain='ark')"
+python -c "import app;app.deploy(host='127.0.0.1', port=5200, blockchain='sxp')"
+python -c "import slp.api;slp.api.deploy(host='127.0.0.1', port=5100, blockchain='sxp')"
 
 echo
 echo "setup finished"
