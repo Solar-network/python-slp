@@ -1,7 +1,7 @@
 #!/bin/bash
 
 VENVDIR="$HOME/.local/share/slp/venv"
-GITREPO="https://github.com/Moustikitos/python-slp.git"
+GITREPO="https://github.com/Solar-network/python-slp.git"
 
 clear
 
