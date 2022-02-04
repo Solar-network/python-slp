@@ -199,7 +199,7 @@ class Broadcaster(threading.Thread):
 
 class Topology(threading.Thread):
 
-    PEERS = set()
+    PEERS = set([])
 
     def __init__(self, *args, **kwargs):
         threading.Thread.__init__(self)
@@ -221,11 +221,12 @@ class Topology(threading.Thread):
                 orderBy="height:desc", peer=slp.JSON["api peer"]
             ).get("data", [])
         ]) - Topology.PEERS:
-            if req.GET.message(peer=peer).get("status", 400) == 200:
-                Topology.PEERS.update(peer)
+            slp.LOG.debug("checking %s", peer)
+            if req.HEAD.message(peer=peer).get("status", 400) == 200:
+                Topology.PEERS.update([peer])
                 slp.LOG.info("SLP peer found: %s", peer)
         slp.dumpJson(list(Topology.PEERS), "topology.json")
         slp.LOG.info(
-            "topology determination done (%d peers): %s", len(Topology.PEERS)
+            "topology determination done (%d peers)", len(Topology.PEERS)
         )
-        discovery(*Toplogy.PEERS)
+        discovery(*Topology.PEERS)
