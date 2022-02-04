@@ -5,7 +5,6 @@ import slp
 import math
 import json
 import queue
-import random
 import hashlib
 import threading
 import traceback
@@ -48,7 +47,6 @@ def bind_callback(reccord, func, *args, **kwargs):
             "origin": f"http://{slp.PUBLIC_IP}:{slp.PORT}",
             "blockstamp": blockstamp,
             "hash": hashlib.sha256(seed).hexdigest(),
-            # "n": len(PEERS), "x": 0
         }
     }
     return send_message(msg)
@@ -75,7 +73,7 @@ def manage_consensus(msg):
                 "consent": {
                     "blockstamp": blockstamp,
                     "poh": poh,
-                    "#": os.urandom(32).hex() # msg["consensus"]["x"]
+                    "#": os.urandom(32).hex()
                 }
             },
             msg["consensus"]["origin"]
@@ -197,3 +195,37 @@ class Broadcaster(threading.Thread):
                     slp.LOG.info("Broadcaster %s clean exit", id(self))
             except Exception as error:
                 slp.LOG.error("%r\n%s", error, traceback.format_exc())
+
+
+class Topology(threading.Thread):
+
+    PEERS = set()
+
+    def __init__(self, *args, **kwargs):
+        threading.Thread.__init__(self)
+        peers = slp.loadJson("topology.json")
+        if peers:
+            Topology.PEERS.update(peers)
+        self.daemon = True
+        self.start()
+        slp.LOG.info("Topology %s set", id(self))
+
+    @staticmethod
+    def stop():
+        Topology.STOP.set()
+
+    def run(self):
+        # idea is to prospect for a all peers
+        for peer in set([
+            "http://%s:5201" % p["ip"] for p in req.GET.api.peers(
+                orderBy="height:desc", peer=slp.JSON["api peer"]
+            ).get("data", [])
+        ]) - Topology.PEERS:
+            if req.GET.message(peer=peer).get("status", 400) == 200:
+                Topology.PEERS.update(peer)
+                slp.LOG.info("SLP peer found: %s", peer)
+        slp.dumpJson(list(Topology.PEERS), "topology.json")
+        slp.LOG.info(
+            "topology determination done (%d peers): %s", len(Topology.PEERS)
+        )
+        discovery(*Toplogy.PEERS)
