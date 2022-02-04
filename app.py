@@ -145,11 +145,6 @@ class SlpApp(srv.uJsonApp):
         sync.chain.BlockParser.stop()
 
 
-@srv.bind("/slp/<str:addr>/<str:tp>")
-def test(addr, tp, **kw):
-    return f"<html><body><p>{addr}, {tp}</p><p>{kw}</p></body></html>"
-
-
 if __name__ == "__main__":
     # FOR TESTING PURPOSE ONLY ---
 
@@ -167,7 +162,7 @@ if __name__ == "__main__":
         help="port to use                [default: slp default port]"
     )
 
-    init("ark")
+    init("sxp")
 
     (options, args) = parser.parse_args()
     slp.PUBLIC_IP = options.host
