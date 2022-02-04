@@ -29,16 +29,16 @@ sudo systemctl enable slp.service
 
 ## Settings
 
-  * [x] webhook has to be enabled on `Ark` relay
-  * [x] set `webhook peer` in `ark.json` file
+  * [x] webhook has to be enabled on relay node
+  * [x] set `webhook peer` in `sxp.json` file
 
 **if `python-slp` is running on a standalone node**
 
-  * [x] node ip where `python-slp` is installed has to be whitelisted by the `Ark` relay
+  * [x] node ip where `python-slp` is installed has to be whitelisted by the relay
 
 ## Custom deployment
 
-`python-slp` is configured on port 5200 and 5100. To deploy node and api with a specific `Ark-fork`, edit `.json` files in package directory according to  the targeted blockchain and deploy:
+`python-slp` is configured on port 5200 and 5100. To deploy node and api with a specific `Ark-fork`, edit `<name>.json` files in package directory according to  the targeted blockchain and deploy:
 
 ```sh
 python -c "import app;app.deploy(host='127.0.0.1', port=5243, blockchain='name')"
