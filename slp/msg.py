@@ -23,10 +23,12 @@ def listen_blockchain(**request):
 
 
 # listen requests to /message endpoint
-@srv.bind("/message", methods=["HEAD", "POST"], app=srv.uJsonHandler)
+@srv.bind("/message", methods=["HEAD", "POST", "GET"], app=srv.uJsonHandler)
 def manage_message(**request):
     if request["method"] == "POST":
         return {"queued": Messenger.put(request)}
+    elif request["method"] == "GET":
+        return {"status": 200}
 
 
 # listen requests to /peers endpoint
