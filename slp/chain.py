@@ -236,7 +236,8 @@ def manage_block(**request):
         )
         return False
     # get block data
-    body = request.get("data", {})
+    slp.LOG.info("Genuine block header received:\n%s", request)
+    body = json.loads(request.get("data", {}))
     block = body.get("data", {})
     # homogenize diff between api data and webhook data
     timestamp = float(body["timestamp"]) / 1000.  # time.time()
@@ -246,7 +247,6 @@ def manage_block(**request):
         "unix": timestamp,
     }
     block["transactions"] = block.pop("numberOfTransactions")
-    slp.LOG.info("Genuine block header received:\n%s", body)
     # push block into queue to be parsed
     BlockParser.JOB.put(block)
 
