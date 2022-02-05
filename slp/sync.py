@@ -39,7 +39,7 @@ class Processor(threading.Thread):
         peer = mark.get("peer", random.choice(peers))
         # determine where to start
         start_height = max(
-            min(slp.JSON["milestones"].keys()),
+            min(list(slp.JSON["milestones"].keys())[1:]),
             mark.get("last parsed block", 0)
         )
         last_reccord = list(
@@ -48,7 +48,7 @@ class Processor(threading.Thread):
         if len(last_reccord):
             start_height = max(last_reccord[0]["height"], start_height)
         block_per_page = 100
-        page = start_height // block_per_page - 1
+        page = max(1, start_height // block_per_page - 1)
 
         slp.LOG.info("Start downloading blocks from height %s", start_height)
         last_parsed = start_height
