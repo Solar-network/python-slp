@@ -7,20 +7,6 @@
 
 Each journal entry contains a `poh` (proof of history) computed as a md5 hash on concatenation of previous `poh` entry and md5 hash of current SLP contract fields.
 
-```python
->>> previous_poh = "9996e575e3306735b3098605b8b1efba"
->>> slp1 = {
-   "tp": "SEND",
-   "id": "8259ce077b1e767227e5e0fce590d26d",
-   "qt": 10.0,
-   "no": "Enjoy your bARK tokens!"
-}
->>> seed = json.dumps(slp1, sort_keys=True, separators=(',', ':'))
->>> seed = previous_poh + hashlib.md5(seed.encode("utf-8")).hexdigest()
->>> hashlib.md5(seed.encode("utf-8")).hexdigest()
-'04fbeeb813a5b1bee8fefa8735e196fb'
-```
-
 ## SLP transaction
 
 Once user submited a contract proposition to a specific peer (requested peer), it will return a transaction to be signed and broadcasted if network consensus is reached.
@@ -33,11 +19,10 @@ A consensus message is sent by a requested peer and has to reach a succession of
   2. requested peer checks contract assertions
      - exit if at least one assertion is `False`
   3. requested peer computes `hash(SLP contract)` and `POH`
-  4. requested peer generates consensus message and send it to a random peer
-     - consensus message : `{"origin":<peer address>, "blockstamp":<bockstamp>, "hash"<slp fields hash>, "n":<N>, "x":0}`
-  5. on consensus message received :
-     + compute `POH`, and send it to requested peer with height and hash: `{"blockstamp":<blockstamp>, "POH":<poh>}`
-     + if `x < n` increment X and forward to a random peer: `{"origin":<peer address>, "blockstamp":<bockstamp>, "hash"<slp fields hash>, "n":<N>, "x":1}`
+  4. requested peer generates consensus message and send it to known peers:
+     - consensus message : `{"origin":<peer address>, "blockstamp":<bockstamp>, "hash":<slp fields hash>}`
+  5. on consensus message received:
+     - compute `POH`, and send it to requested peer with height and hash: `{"blockstamp":<blockstamp>, "POH":<poh>}`
   6. requested peer increment valid POH count until quorum is reach
 
 # SLP crosschain POC
