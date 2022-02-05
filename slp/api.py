@@ -22,6 +22,71 @@ SEARCH_FIELDS = "address,tokenId,blockStamp,owner,frozen," \
                 "height,index,type,paused,symbol".split(",")
 
 
+def deploy(host="127.0.0.1", port=5100, blockchain="ark"):
+    """
+    Deploy API on ubuntu as system daemon.
+    """
+    normpath = os.path.normpath
+    executable = normpath(sys.executable)
+    package_path = normpath(os.path.abspath(os.path.dirname(slp.__path__[0])))
+    gunicorn_conf = normpath(
+        os.path.abspath(os.path.join(package_path, "gunicorn.conf.py"))
+    )
+
+    with open("./slpapi.service", "w") as unit:
+        unit.write(f"""[Unit]
+Description=Side ledger Protocol database API
+After=network.target
+[Service]
+User={os.environ.get("USER", "unknown")}
+WorkingDirectory={normpath(sys.prefix)}
+Environment=PYTHONPATH={package_path}
+ExecStart={os.path.join(os.path.dirname(executable), "gunicorn")} \
+"slp.api:SlpApi(blockchain='{blockchain}')" --bind={host}:{port} --workers=5 \
+--access-logfile -
+Restart=always
+[Install]
+WantedBy=multi-user.target
+""")
+    if os.system("%s -m pip show gunicorn" % executable) != "0":
+        os.system("%s -m pip install gunicorn" % executable)
+    os.system("sudo cp %s %s" % (gunicorn_conf, normpath(sys.prefix)))
+    os.system("chmod +x ./slpapi.service")
+    os.system("sudo mv --force ./slpapi.service /etc/systemd/system")
+    os.system("sudo systemctl daemon-reload")
+    if not os.system("sudo systemctl restart mongod"):
+        os.system("sudo systemctl start mongod")
+    if not os.system("sudo systemctl restart slpapi"):
+        os.system("sudo systemctl start slpapi")
+
+
+class SlpApi(srv.uJsonApp):
+
+    def __init__(self, **options):
+
+        name = options.get("blockchain", "sxp")
+        level = options.get("loglevel", 20)
+
+        # clear logging handlers
+        slp.LOG.handlers.clear()
+
+        data = slp.loadJson(f"{name}.json")
+        if len(data) == 0:
+            slp.LOG.error("Missing JSON configuration file for %s", name)
+            raise Exception("No configuration file found for %s" % name)
+
+        # MONGO DB definitions
+        database_name = data["database name"]
+        dbapi.db = MongoClient(data.get("mongo url", None))[database_name]
+
+        srv.uJsonApp.__init__(self, loglevel=level)
+        signal.signal(signal.SIGTERM, SlpApi.kill)
+
+    @staticmethod
+    def kill(*args, **kwargs):
+        pass
+
+
 @srv.bind("/<str:collection>/find", methods=["GET"], app=srv.uJsonHandler)
 def find(collection, **kw):
     try:
@@ -109,70 +174,34 @@ def find(collection, **kw):
         return {"status": 501, "msg": "Internal Error: %r" % error}
 
 
-def deploy(host="127.0.0.1", port=5100, blockchain="ark"):
-    """
-    Deploy API on ubuntu as system daemon.
-    """
-    normpath = os.path.normpath
-    executable = normpath(sys.executable)
-    package_path = normpath(os.path.abspath(os.path.dirname(slp.__path__[0])))
-    gunicorn_conf = normpath(
-        os.path.abspath(os.path.join(package_path, "gunicorn.conf.py"))
-    )
-
-    with open("./slpapi.service", "w") as unit:
-        unit.write(f"""[Unit]
-Description=Side ledger Protocol database API
-After=network.target
-[Service]
-User={os.environ.get("USER", "unknown")}
-WorkingDirectory={normpath(sys.prefix)}
-Environment=PYTHONPATH={package_path}
-ExecStart={os.path.join(os.path.dirname(executable), "gunicorn")} \
-"slp.api:SlpApi(blockchain='{blockchain}')" --bind={host}:{port} --workers=5 \
---access-logfile -
-Restart=always
-[Install]
-WantedBy=multi-user.target
-""")
-    if os.system("%s -m pip show gunicorn" % executable) != "0":
-        os.system("%s -m pip install gunicorn" % executable)
-    os.system("sudo cp %s %s" % (gunicorn_conf, normpath(sys.prefix)))
-    os.system("chmod +x ./slpapi.service")
-    os.system("sudo mv --force ./slpapi.service /etc/systemd/system")
-    os.system("sudo systemctl daemon-reload")
-    if not os.system("sudo systemctl restart mongod"):
-        os.system("sudo systemctl start mongod")
-    if not os.system("sudo systemctl restart slpapi"):
-        os.system("sudo systemctl start slpapi")
-
-
-class SlpApi(srv.uJsonApp):
-
-    def __init__(self, **options):
-
-        name = options.get("blockchain", "ark")
-        level = options.get("loglevel", 20)
-
-        # clear logging handlers
-        slp.LOG.handlers.clear()
-
-        data = slp.loadJson(f"{name}.json")
-        if len(data) == 0:
-            slp.LOG.error("Missing JSON configuration file for %s", name)
-            raise Exception("No configuration file found for %s" % name)
-
-        # MONGO DB definitions
-        database_name = data["database name"]
-        dbapi.db = MongoClient(data.get("mongo url", None))[database_name]
-
-        srv.uJsonApp.__init__(self, loglevel=level)
-        signal.signal(signal.SIGTERM, SlpApi.kill)
-
-    @staticmethod
-    def kill(*args, **kwargs):
-        pass
-
-
 # TODO: https://aslp.qredit.dev
 # TODO: https://github.com/Qredit/qslp/blob/ark/public/aslp_openapi3.yaml
+
+
+@srv.bind("/api/status", methods=["GET"], app=srv.uJsonHandler)
+def status():
+    cursor = dbapi.db.journal.find({})
+    total = dbapi.db.journal.count_documents({})
+    try:
+        downloaded = list(cursor.sort("_id", -1))[0]["height"]
+    except IndexError:
+        downloaded = 0
+
+    return {
+        "status": 200,
+        "downloadedBlocks": downloaded,
+        "scannedBlocks": total
+    }
+
+
+@srv.bind("/api/tokens", methods=["GET"], app=srv.uJsonHandler)
+def tokens(id, **kw):
+    return [
+        dbapi.token_details(contract["tokenId"])
+        for contract in dbapi.db.contracts.find()
+    ]
+
+
+@srv.bind("/api/token/<str:id>", methods=["GET"], app=srv.uJsonHandler)
+def token(id):
+    return dbapi.token_details(id)

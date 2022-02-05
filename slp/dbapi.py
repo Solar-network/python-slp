@@ -7,6 +7,8 @@ import hashlib
 import decimal
 import traceback
 
+from datetime import datetime
+
 # mongo database to be initialized by slp app
 db = None
 
@@ -215,3 +217,58 @@ def get_unix_time(blockstamp, peer=None):
     reccord = find_reccord(height=height, index=index)
     if reccord:
         return reccord.get("timestamp", None)
+
+
+def token_details(id):
+    contract = find_contract(tokenId=id)
+    reccord = find_reccord(id=id, tp="GENESIS")
+
+    if contract is None or reccord is None:
+        return {}
+
+    last_reccord = list(db.journal.find({"id": id}).sort("_id", -1))[0]
+    timestamp = reccord.get("timestamp", 0)
+
+    return {
+        "schema_version":
+            slp.JSON.ask("schema version", height=reccord["height"]),
+        "type": contract["type"],
+        "paused": contract["paused"],
+        "tokenDetails": {
+            "ownerAddress": contract["owner"],
+            "tokenIdHex": contract["tokenId"],
+            "versionType": int(contract["type"][-1]),
+            "genesis_timestamps":
+                datetime.fromtimestamp(timestamp).strftime(
+                    r"%Y-%m-%dT%H:%M:%S.000Z"
+                ),
+            "genesis_timestamp_unix": timestamp,
+            "symbol": contract["symbol"],
+            "name": contract["name"],
+            "documentUri": contract["document"],
+            "decimals": reccord.get("de", None),
+            "genesisQuantity": reccord.get("qt", None),
+            "pausable": reccord["pa"],
+            "mintable": reccord.get("mi", None)
+        },
+        "tokenStats": {},
+        "lastUpdatedBlock": last_reccord["height"]
+    }
+
+# {
+#   "tokenStats": {
+#     "schema_version": 0,
+#     "block_created_height": 0,
+#     "block_created_id": "string",
+#     "block_last_active_send": 0,
+#     "block_last_active_mint": 0,
+#     "creation_transaction_id": "string",
+#     "qty_valid_txns_since_genesis": 0,
+#     "qty_valid_token_addresses": 0,
+#     "qty_token_minted": "string",
+#     "qty_token_burned": "string",
+#     "qty_token_circulating_supply": "string",
+#     "qty_ark_spent": "string"
+#   },
+#   "lastUpdatedBlock": 0
+# }
