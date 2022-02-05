@@ -57,7 +57,7 @@ def init(name, **overrides):
     node.PEER_LIMIT = slp.JSON.get("peer limit", 10)
 
 
-def deploy(host="127.0.0.1", port=5200, blockchain="ark"):
+def deploy(host="127.0.0.1", port=5200, blockchain="sxp"):
     """
     Deploy slp node on ubuntu as system daemon.
     """
@@ -128,7 +128,7 @@ class SlpApp(srv.uJsonApp):
 
     def __init__(self, host="127.0.0.1", port=5200, **options):
         slp.PORT = port
-        init(options.get("blockchain", "ark"))
+        init(options.get("blockchain", "sxp"))
         srv.uJsonApp.__init__(
             self, host, port, loglevel=options.get("loglevel", 20)
         )
