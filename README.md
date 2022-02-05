@@ -15,7 +15,7 @@ sudo systemctl start mongod.service
 Install `python-slp` node via easy installation script:
 
 ```sh
-bash <(curl -s https://raw.githubusercontent.com/Solar-network/python-slp/master/slp-install.sh)
+bash <(curl -s https://raw.githubusercontent.com/Solar-network/python-slp/sxp-devnet/slp-install.sh)
 ```
 
 `python-slp` node will then run as a background service on your system. Status and logs are accessible from `systemctl` and `journalctl` commands.
