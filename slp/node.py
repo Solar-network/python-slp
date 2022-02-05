@@ -103,7 +103,7 @@ def prospect_peers(*peers):
     # for all new peer
     for peer in set(peers) - set([me]):
         # ask peer's peer list
-        resp = req.GET.peers(peer=peer)
+        resp = req.GET.peers(peer=peer, headers=slp.HEADERS)
         # if it answerd
         if isinstance(resp, list):
             # add peer to peerlist and prospect peer's peer list
@@ -189,7 +189,10 @@ class Broadcaster(threading.Thread):
                 if isinstance(endpoint, req.EndPoint):
                     for peer in peers or PEERS:
                         slp.LOG.info(
-                            "%s", endpoint(peer=peer, _jsonify=msg)
+                            "%s", endpoint(
+                                peer=peer, _jsonify=msg,
+                                headers=slp.HEADERS
+                            )
                         )
                 else:
                     slp.LOG.info("Broadcaster %s clean exit", id(self))
@@ -217,12 +220,15 @@ class Topology(threading.Thread):
     def run(self):
         # idea is to prospect for a all peers
         for peer in set([
-            "http://%s:5201" % p["ip"] for p in req.GET.api.peers(
-                orderBy="height:desc", peer=slp.JSON["api peer"]
+            "http://%s:5200" % p["ip"] for p in req.GET.api.peers(
+                orderBy="height:desc", peer=slp.JSON["api peer"],
+                headers=slp.HEADERS
             ).get("data", [])
-        ]) - Topology.PEERS:
+        ]):
             slp.LOG.debug("checking %s", peer)
-            if req.HEAD.message(peer=peer).get("status", 400) == 200:
+            if req.HEAD.message(peer=peer, headers=slp.HEADERS).get(
+                "status", 400
+            ) == 200:
                 Topology.PEERS.update([peer])
                 slp.LOG.info("SLP peer found: %s", peer)
         slp.dumpJson(list(Topology.PEERS), "topology.json")
@@ -230,3 +236,4 @@ class Topology(threading.Thread):
             "topology determination done (%d peers)", len(Topology.PEERS)
         )
         discovery(*Topology.PEERS)
+        PEERS.update(Topology.PEERS)

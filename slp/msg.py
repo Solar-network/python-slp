@@ -118,7 +118,8 @@ class Messenger(threading.Thread):
                             )
                     else:
                         msg = request.get("data", {})
-                        # headers = request.get("headers", {})
+                        if not isinstance(msg, dict):
+                            msg = json.loads(msg)
                         slp.LOG.info("Performing message: %r", msg)
                         if "hello" in msg:
                             resp = node.manage_hello(msg)

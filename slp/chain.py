@@ -190,7 +190,7 @@ def get_unix_time(blockstamp, peer=None):
     """
     height, index = blockstamp.split("#")
     block = req.GET.api.blocks(
-        height, peer=peer or slp.JSON["api peer"]
+        height, peer=peer or slp.JSON["api peer"], headers=slp.HEADERS
     ).get("data", {})
     transactions = block.get("transactions", 0)
     timestamp = block.get("timestamp", {}).get("unix", None)
