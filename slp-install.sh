@@ -17,7 +17,6 @@ echo installing system dependencies
 echo ==============================
 sudo apt-get -qq install python3 python3-dev python3-setuptools python3-pip
 sudo apt-get -qq install virtualenv
-sudo apt-get -qq install nginx
 echo "done"
 
 echo
@@ -34,11 +33,6 @@ else
     git reset --hard
     git fetch --all
     git checkout $B -f
-    # if [ "$B" == "master" ]; then
-    #     git checkout $B -f
-    # else
-    #     git checkout tags/$B -f
-    # fi
     git pull
 fi
 
