@@ -8,12 +8,16 @@ import decimal
 import traceback
 
 from datetime import datetime
+from pymongo import MongoClient
 
 # mongo database to be initialized by slp app
 db = None
 
 
 def set_legit(filter, value=True):
+    """
+    Update legit value of a journal reccord.
+    """
     value = bool(value)
     db.journal.update_one(filter, {'$set': {"legit": value}})
     return value
@@ -219,56 +223,146 @@ def get_unix_time(blockstamp, peer=None):
         return reccord.get("timestamp", None)
 
 
-def token_details(id):
-    contract = find_contract(tokenId=id)
-    reccord = find_reccord(id=id, tp="GENESIS")
-
-    if contract is None or reccord is None:
-        return {}
-
-    last_reccord = list(db.journal.find({"id": id}).sort("_id", -1))[0]
-    timestamp = reccord.get("timestamp", 0)
-
-    return {
-        "schema_version":
-            slp.JSON.ask("schema version", height=reccord["height"]),
-        "type": contract["type"],
-        "paused": contract["paused"],
-        "tokenDetails": {
-            "ownerAddress": contract["owner"],
-            "tokenIdHex": contract["tokenId"],
-            "versionType": int(contract["type"][-1]),
-            "genesis_timestamps":
-                datetime.fromtimestamp(timestamp).strftime(
-                    r"%Y-%m-%dT%H:%M:%S.000Z"
-                ),
-            "genesis_timestamp_unix": timestamp,
-            "symbol": contract["symbol"],
-            "name": contract["name"],
-            "documentUri": contract["document"],
-            "decimals": reccord.get("de", None),
-            "genesisQuantity": reccord.get("qt", None),
-            "pausable": reccord["pa"],
-            "mintable": reccord.get("mi", None)
-        },
-        "tokenStats": {},
-        "lastUpdatedBlock": last_reccord["height"]
-    }
-
-# {
-#   "tokenStats": {
-#     "schema_version": 0,
-#     "block_created_height": 0,
-#     "block_created_id": "string",
-#     "block_last_active_send": 0,
-#     "block_last_active_mint": 0,
-#     "creation_transaction_id": "string",
-#     "qty_valid_txns_since_genesis": 0,
-#     "qty_valid_token_addresses": 0,
-#     "qty_token_minted": "string",
-#     "qty_token_burned": "string",
-#     "qty_token_circulating_supply": "string",
-#     "qty_ark_spent": "string"
-#   },
-#   "lastUpdatedBlock": 0
-# }
+def token_details(tokenId):
+    """
+    Compute token details using mongo db aggregations.
+    """
+    return list(db.contracts.aggregate([
+        {
+            '$match': {
+                'tokenId': {
+                    '$eq': tokenId
+                }
+            }
+        }, {
+            '$lookup': {
+                'from': 'journal',
+                'pipeline': [
+                    {
+                        '$match': {
+                            'id': tokenId,
+                            'legit': True
+                        }
+                    }
+                ],
+                'as': 'reccords'
+            }
+        }, {
+            '$addFields': {
+                '_table': {
+                    '$substr': [
+                        '$type', 1, -1
+                    ]
+                },
+                '_type': {
+                    '$substr': [
+                        '$type', {
+                            '$subtract': [
+                                {
+                                    '$strLenCP': '$type'
+                                }, 1
+                            ]
+                        }, 1
+                    ]
+                },
+                '_minted': {
+                    '$toDouble': {
+                        '$getField': 'minted'
+                    }
+                },
+                '_burned': {
+                    '$toDouble': {
+                        '$getField': 'burned'
+                    }
+                },
+                '_crossed': {
+                    '$toDouble': {
+                        '$getField': 'crossed'
+                    }
+                },
+                '_0': {
+                    '$first': '$reccords'
+                }
+            }
+        }, {
+            '$project': {
+                '_id': 0,
+                'type': 1,
+                'paused': 1,
+                'tokenDetails': {
+                    'ownerAddress': '$owner',
+                    'tokenIdHex': '$tokenId',
+                    'versionType': '$_type',
+                    'genesis_timestamp_unix': '$timestamp',
+                    'symbol': '$symbol',
+                    'documentUri': '$document',
+                    'genesisQuantity': {
+                        '$toDouble': {
+                            '$getField': 'globalSupply'
+                        }
+                    },
+                    'decimals': {
+                        '$getField': {
+                            'field': 'de',
+                            'input': '$_0'
+                        }
+                    },
+                    'pausable': {
+                        '$getField': {
+                            'field': 'pa',
+                            'input': '$_0'
+                        }
+                    },
+                    'mintable': {
+                        '$getField': {
+                            'field': 'mi',
+                            'input': '$_0'
+                        }
+                    }
+                },
+                'tokenStats': {
+                    'block_created_height': {
+                        '$getField': {
+                            'field': 'height',
+                            'input': '$_0'
+                        }
+                    },
+                    'creation_transaction_id': '$txid',
+                    'qty_valid_txns_since_genesis': {
+                        '$size': '$reccords'
+                    },
+                    'qty_token_minted': '$_minted',
+                    'qty_token_burned': '$_burned',
+                    'qty_token_crossed': '$_crossed',
+                    'qty_token_circulating_supply': {
+                        '$cond': [
+                            {
+                                '$eq': [
+                                    '$_type', 'slp1'
+                                ]
+                            }, {
+                                '$subtract': [
+                                    {
+                                        '$subtract': [
+                                            '$_minted', '$_burned'
+                                        ]
+                                    }, '$_crossed'
+                                ]
+                            }, None
+                        ]
+                    },
+                    'total_cost': {
+                        '$sum': '$reccords.cost'
+                    }
+                },
+                'lastUpdatedBlock': {
+                    '$getField': {
+                        'field': 'height',
+                        'input': {
+                            '$last': '$reccords'
+                        }
+                    }
+                }
+            }
+        }
+    ]))
