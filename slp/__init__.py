@@ -36,6 +36,8 @@ VALIDATION = {
     "ch": lambda value: isinstance(value, int),
     "dt": lambda value: re.match(r"^.{0,256}$", value) is not None
 }
+
+#: headers sent from with all python-slp HTTP requests
 HEADERS = {
     "API-Version": "3",
     "Content-Type": "application/json",
@@ -93,25 +95,25 @@ def get_token_id(slp_type, symbol, blockheight, txid):
     return hashlib.md5(raw.encode("utf-8")).hexdigest()
 
 
-def merge_milestone(a, b):
-    merged = dict(a)
-    for k, v in b.items():
-        if k in merged:
-            if type(merged[k]) != type(v):
-                raise Exception("Unmergeable data")
-            if isinstance(v, dict):
-                merged[k].update(v)
-            elif isinstance(v, list):
-                merged[k].extend(v)
-                merged[k] = list(set(merged[k]))
+class Config(dict):
+
+    @staticmethod
+    def merge_milestone(a, b):
+        merged = dict(a)
+        for k, v in b.items():
+            if k in merged:
+                if type(merged[k]) != type(v):
+                    raise Exception("Unmergeable data")
+                if isinstance(v, dict):
+                    merged[k].update(v)
+                elif isinstance(v, list):
+                    merged[k].extend(v)
+                    merged[k] = list(set(merged[k]))
+                else:
+                    merged[k] = v
             else:
                 merged[k] = v
-        else:
-            merged[k] = v
-    return merged
-
-
-class Config(dict):
+        return merged
 
     def load(self, name, **overrides):
 
@@ -126,7 +128,7 @@ class Config(dict):
 
         for milestone in sorted(milestones, key=lambda m: m["height"]):
             height = milestone.pop("height")
-            milestone = merge_milestone(previous_milestone, milestone)
+            milestone = Config.merge_milestone(previous_milestone, milestone)
             data["milestones"][height] = milestone
             previous_milestone = milestone
 
