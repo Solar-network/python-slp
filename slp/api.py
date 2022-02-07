@@ -186,22 +186,62 @@ def status():
         downloaded = list(cursor.sort("_id", -1))[0]["height"]
     except IndexError:
         downloaded = 0
-
     return {
-        "status": 200,
         "downloadedBlocks": downloaded,
         "scannedBlocks": total
     }
 
 
 @srv.bind("/api/tokens", methods=["GET"], app=srv.uJsonHandler)
-def tokens(id, **kw):
-    return [
-        dbapi.token_details(contract["tokenId"])
-        for contract in dbapi.db.contracts.find()
-    ]
+def tokens(page=1, limit=50):
+    page = int(page)
+    limit = int(limit)
+    # computes count and execute first filter
+    total = dbapi.db.contracts.count_documents({})
+    cursor = dbapi.db.contracts.find({})
+    pages = int(math.ceil(total / float(limit)))
+    # jump to asked page
+    cursor = cursor.skip((page-1) * limit)
+
+    data = []
+    for contract in list(cursor.limit(min(100, limit))):
+        data.extend(dbapi.token_details(contract["tokenId"]))
+
+    return {
+        "meta": {
+            "count": len(data),
+            "totalCount": total,
+            "page": page,
+            "pageCount": pages
+        },
+        "data": data
+    }
 
 
-@srv.bind("/api/token/<str:id>", methods=["GET"], app=srv.uJsonHandler)
-def token(id):
-    return dbapi.token_details(id)
+@srv.bind("/api/token/<str:tokenId>", methods=["GET"], app=srv.uJsonHandler)
+def token(tokenId):
+    token = dbapi.token_details(tokenId)
+    if len(token):
+        return token[0]
+    else:
+        return {"status": 404, "msg": "token not found"}
+
+
+@srv.bind("/api/tokenByTxid/<str:txId>", methods=["GET"], app=srv.uJsonHandler)
+def token_by_txid(txId):
+    reccord = dbapi.find_reccord(txid=txId)
+    return dbapi.token_details(reccord["id"])
+
+
+@srv.bind(
+    "/api/tokensByOwner/<str:addr>", methods=["GET"], app=srv.uJsonHandler
+)
+def token_by_owner(addr):
+    return {"status": 404}
+
+
+@srv.bind(
+    "/api/tokenWithMeta/<str:tokenId>", methods=["GET"], app=srv.uJsonHandler
+)
+def token_with_meta(tokenId):
+    return {"status": 404}
