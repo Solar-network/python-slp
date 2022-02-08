@@ -228,63 +228,29 @@ def token_details(tokenId):
     Compute token details using mongo db aggregations.
     """
     return list(db.contracts.aggregate([
+        {'$match': {'tokenId': {'$eq': tokenId}}},
         {
-            '$match': {
-                'tokenId': {
-                    '$eq': tokenId
-                }
-            }
-        }, {
             '$lookup': {
                 'from': 'journal',
-                'pipeline': [
-                    {
-                        '$match': {
-                            'id': tokenId,
-                            'legit': True
-                        }
-                    }
-                ],
+                'pipeline': [{'$match': {'id': tokenId, 'legit': True}}],
                 'as': 'reccords'
             }
-        }, {
+        },
+        {
             '$addFields': {
-                '_table': {
-                    '$substr': [
-                        '$type', 1, -1
-                    ]
-                },
+                '_table': {'$substr': ['$type', 1, -1]},
                 '_type': {
                     '$substr': [
-                        '$type', {
-                            '$subtract': [
-                                {
-                                    '$strLenCP': '$type'
-                                }, 1
-                            ]
-                        }, 1
+                        '$type', {'$subtract': [{'$strLenCP': '$type'}, 1]}, 1
                     ]
                 },
-                '_minted': {
-                    '$toDouble': {
-                        '$getField': 'minted'
-                    }
-                },
-                '_burned': {
-                    '$toDouble': {
-                        '$getField': 'burned'
-                    }
-                },
-                '_crossed': {
-                    '$toDouble': {
-                        '$getField': 'crossed'
-                    }
-                },
-                '_0': {
-                    '$first': '$reccords'
-                }
+                '_minted': {'$toDouble': {'$getField': 'minted'}},
+                '_burned': {'$toDouble': {'$getField': 'burned'}},
+                '_crossed': {'$toDouble': {'$getField': 'crossed'}},
+                '_0': {'$first': '$reccords'}
             }
-        }, {
+        },
+        {
             '$project': {
                 '_id': 0,
                 'type': 1,
@@ -297,68 +263,36 @@ def token_details(tokenId):
                     'symbol': '$symbol',
                     'documentUri': '$document',
                     'genesisQuantity': {
-                        '$toDouble': {
-                            '$getField': 'globalSupply'
-                        }
+                        '$toDouble': {'$getField': 'globalSupply'}
                     },
-                    'decimals': {
-                        '$getField': {
-                            'field': 'de',
-                            'input': '$_0'
-                        }
-                    },
-                    'pausable': {
-                        '$getField': {
-                            'field': 'pa',
-                            'input': '$_0'
-                        }
-                    },
-                    'mintable': {
-                        '$getField': {
-                            'field': 'mi',
-                            'input': '$_0'
-                        }
-                    }
+                    'decimals': {'$getField': {'field': 'de', 'input': '$_0'}},
+                    'pausable': {'$getField': {'field': 'pa', 'input': '$_0'}},
+                    'mintable': {'$getField': {'field': 'mi', 'input': '$_0'}}
                 },
                 'tokenStats': {
                     'block_created_height': {
-                        '$getField': {
-                            'field': 'height',
-                            'input': '$_0'
-                        }
+                        '$getField': {'field': 'height', 'input': '$_0'}
                     },
                     'creation_transaction_id': '$txid',
-                    'qty_valid_txns_since_genesis': {
-                        '$size': '$reccords'
-                    },
+                    'qty_valid_txns_since_genesis': {'$size': '$reccords'},
                     'qty_token_minted': '$_minted',
                     'qty_token_burned': '$_burned',
                     'qty_token_crossed': '$_crossed',
                     'qty_token_circulating_supply': {
                         '$cond': [
+                            {'$eq': ['$_type', 'slp1']},
                             {
-                                '$eq': [
-                                    '$_type', 'slp1'
-                                ]
-                            }, {
                                 '$subtract': [
-                                    {
-                                        '$subtract': [
-                                            '$_minted', '$_burned'
-                                        ]
-                                    }, '$_crossed'
+                                    {'$subtract': ['$_minted', '$_burned']},
+                                    '$_crossed'
                                 ]
                             }, None
                         ]
                     },
-                    'total_cost': {
-                        '$sum': '$reccords.cost'
-                    }
+                    'total_cost': {'$sum': '$reccords.cost'}
                 },
                 'lastUpdatedBlock': {
-                    '$getField': {
-                        'field': 'height',
-                        'input': {
+                    '$getField': {'field': 'height', 'input': {
                             '$last': '$reccords'
                         }
                     }
