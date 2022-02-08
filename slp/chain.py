@@ -280,6 +280,9 @@ def parse_block(block, peer=None):
         if contract:
             try:
                 slp_type, fields = list(contract.items())[0]
+                if slp_type not in slp.JSON.ask("slp types", block["height"]):
+                    slp.LOG.info("> unknown SLP contract found: %s", slp_type)
+                    raise Exception("unknown SLP contract %s" % slp_type)
                 slp.LOG.info(
                     "> SLP contract found: %s->%s", slp_type, fields["tp"]
                 )
