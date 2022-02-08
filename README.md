@@ -41,8 +41,8 @@ sudo systemctl enable slp.service
 `python-slp` is configured on port 5200 and 5100. To deploy node and api with a specific `Ark-fork`, edit `<name>.json` files in package directory according to  the targeted blockchain and deploy:
 
 ```sh
-python -c "import app;app.deploy(host='127.0.0.1', port=5243, blockchain='name')"
-python -c "import slp.api;slp.api.deploy(host='127.0.0.1', port=5124, blockchain='name')"
+python -c "import app;app.deploy(host='0.0.0.0', port=5243, blockchain='name')"
+python -c "import slp.api;slp.api.deploy(host='0.0.0.0', port=5124, blockchain='name')"
 ```
 
 Where `name` is the basename of json configuration used to store specific blockchain parameters.
