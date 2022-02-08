@@ -12,7 +12,7 @@ import logging.handlers
 from usrv import srv, req
 from pymongo import MongoClient
 from bson.decimal128 import Decimal128
-from slp import sync, node, msg, dbapi
+from slp import sync, node, msg, dbapi, api
 
 
 def init(name, **overrides):
@@ -86,23 +86,23 @@ WantedBy=multi-user.target
     os.system("chmod +x ./slp.service")
     os.system("sudo mv --force ./slp.service /etc/systemd/system")
 
-#     with io.open("./slpsrv.service", "w") as unit:
-#         unit.write(f"""[Unit]
-# Description=Side ledger Protocol server
-# After=network.target
-# [Service]
-# User={os.environ.get("USER", "unknown")}
-# WorkingDirectory={normpath(sys.prefix)}
-# Environment=PYTHONPATH={package_path}
-# ExecStart={os.path.join(os.path.dirname(executable), "gunicorn")} \
-# "app:uHtmlApp('{host}', {port + 1})" --bind={host}:{port + 1} --workers=4 \
-# --access-logfile -
-# Restart=always
-# [Install]
-# WantedBy=multi-user.target
-# """)
-#     os.system("chmod +x ./slpsrv.service")
-#     os.system("sudo mv --force ./slpsrv.service /etc/systemd/system")
+    with open("./slpapi.service", "w") as unit:
+        unit.write(f"""[Unit]
+Description=Side ledger Protocol database API
+After=network.target
+[Service]
+User={os.environ.get("USER", "unknown")}
+WorkingDirectory={normpath(sys.prefix)}
+Environment=PYTHONPATH={package_path}
+ExecStart={os.path.join(os.path.dirname(executable), "gunicorn")} \
+"app:SlpApi('{host}', {port-100}, blockchain='{blockchain}')" \
+--bind={host}:{port-100} --workers=4 --access-logfile -
+Restart=always
+[Install]
+WantedBy=multi-user.target
+""")
+    os.system("chmod +x ./slpapi.service")
+    os.system("sudo mv --force ./slpapi.service /etc/systemd/system")
 
     if os.system("%s -m pip show gunicorn" % executable) != "0":
         os.system("%s -m pip install gunicorn" % executable)
@@ -112,16 +112,8 @@ WantedBy=multi-user.target
         os.system("sudo systemctl start mongod")
     if not os.system("sudo systemctl restart slp"):
         os.system("sudo systemctl start slp")
-    # if not os.system("sudo systemctl restart slpsrv"):
-    #     os.system("sudo systemctl start slpsrv")
-
-
-# class uHtmlApp(srv.uJsonApp):
-
-#     def __call__(self, environ, start_response):
-#         return srv.uroot.wsgi_call(
-#             srv.uroot.uRawHandler, environ, start_response
-#         )
+    if not os.system("sudo systemctl restart slpapi"):
+        os.system("sudo systemctl start slpapi")
 
 
 class SlpApp(srv.uJsonApp):
@@ -134,6 +126,7 @@ class SlpApp(srv.uJsonApp):
         )
         sync.Processor()  # --> will start a BlockParser
         node.Broadcaster()
+        node.Topology()
         msg.Messenger()
         signal.signal(signal.SIGTERM, SlpApp.kill)
 
@@ -143,6 +136,20 @@ class SlpApp(srv.uJsonApp):
         node.Broadcaster.stop()
         msg.Messenger.stop()
         sync.chain.BlockParser.stop()
+
+
+class SlpApi(srv.uJsonApp):
+
+    def __init__(self, host="127.0.0.1", port=5100, **options):
+        slp.PORT = port
+        init(options.get("blockchain", "sxp"))
+        srv.uJsonApp.__init__(
+            self, host, port, loglevel=options.get("loglevel", 20)
+        )
+
+    @staticmethod
+    def kill(*args, **kwargs):
+        pass
 
 
 if __name__ == "__main__":

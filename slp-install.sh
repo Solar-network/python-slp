@@ -70,7 +70,6 @@ echo
 echo deploying node and api
 echo ======================
 python -c "import app;app.deploy(host='0.0.0.0', port=5200, blockchain='sxp')"
-python -c "import slp.api;slp.api.deploy(host='0.0.0.0', port=5100, blockchain='sxp')"
 
 echo
 echo "setup finished"
