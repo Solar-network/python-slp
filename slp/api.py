@@ -94,9 +94,9 @@ def find(collection, **kw):
     }
 
 
-##################
-## database API ##
-##################
+################
+# database API #
+################
 
 @srv.bind("/<str:collection>/find", methods=["GET"], app=srv.uJsonHandler)
 def lookup(collection, **kw):
@@ -108,11 +108,12 @@ def lookup(collection, **kw):
         )
         return {"status": 501, "msg": "Internal Error: %r" % error}
 
-#############
-## SLP API ##
-#############
+###########
+# SLP API #
+###########
 # TODO: https://aslp.qredit.dev
 # TODO: https://github.com/Qredit/qslp/blob/ark/public/aslp_openapi3.yaml
+
 
 @srv.bind("/api/status", methods=["GET"], app=srv.uJsonHandler)
 def status():
@@ -169,7 +170,7 @@ def token(tokenId):
 def token_by_txid(txId):
     reccord = dbapi.find_reccord(txid=txId)
     if reccord is None:
-        return {"status": 400, "msg": "%s is not a SLP transaction" % txid}
+        return {"status": 400, "msg": "%s is not a SLP transaction" % txId}
     token = dbapi.token_details(reccord["id"])
     if len(token):
         return token[0]
@@ -181,31 +182,19 @@ def token_by_txid(txId):
     "/api/tokensByOwner/<str:addr>", methods=["GET"], app=srv.uJsonHandler
 )
 def token_by_owner(addr, page=1, limit=50):
-    filters = {"address": addr, "owner": True}
-
     page = int(page)
     limit = int(limit)
-    to_skip = (page-1) * limit
-
-    total = 0
-    skiped = 0
-    tokens = []
-    for slp_type in slp.JSON["slp types"]:
-        col = dbapi.db[slp_type]
-        total += col.count_documents(filters)
-        cursor = col.find(filters)
-        if total > (to_skip - skiped):
-            cursor.skip(to_skip - skiped)
-            skiped += to_skip - skiped
-            tokens.extend(cursor.limit(limit-len(tokens)))
-        else:
-            skiped += total
+    # computes count and execute first filter
+    total = dbapi.db.contracts.count_documents({'owner': addr})
+    cursor = dbapi.db.contracts.find({'owner': addr})
     pages = int(math.ceil(total / float(limit)))
+    # jump to asked page
+    cursor = cursor.skip((page-1) * limit)
 
     data = functools.reduce(
         lambda a, b: a + b, [
-            dbapi.token_details(token["tokenId"])
-            for token in tokens
+            dbapi.token_details(contract["tokenId"])
+            for contract in cursor.limit(min(100, limit))
         ], []
     )
     return {
@@ -227,7 +216,7 @@ def token_with_meta(tokenId):
     if len(token):
         token = token[0]
         token["metadata"] = {}
-        for rec in [
+        for reccord in [
             r for r in dbapi.db.slp2.find({"tokenId": tokenId})
             if "metadata" in r
         ]:
@@ -237,9 +226,9 @@ def token_with_meta(tokenId):
         return {"status": 400, "msg": "token %s not found" % tokenId}
 
 
-######################
-## SMARTBRIDGES API ##
-######################
+####################
+# SMARTBRIDGES API #
+####################
 
 @srv.bind("/smartBridge/slp1/<str:tp>", methods=["GET"], app=srv.uJsonHandler)
 def slp1_smartbridge(tp, **kw):

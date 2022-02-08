@@ -291,7 +291,7 @@ def token_details(tokenId):
                             for t in slp.JSON.ask("slp types")
                         ],
                         'initialValue': 0,
-                        'in': {'$add' : ["$$value", "$$this"]}
+                        'in': {'$add': ["$$value", "$$this"]}
                     }
                 },
                 'qty_token_minted': '$_minted',
