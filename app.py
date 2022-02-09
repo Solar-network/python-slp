@@ -1,5 +1,56 @@
 # -*- coding:utf-8 -*-
 
+"""
+
+# Ubuntu app deployment
+
+`app` module deploys and runs `python-slp` node and API. It is deployed behind
+`gunicorn` listening on port 5200 for the core and 5100 for the API.
+
+## Shell integration
+
+### Virtual environment (venv)
+```sh
+. ~/.local/share/slp/venv/bin/activate
+```
+
+### Deployment
+  > venv activated
+```sh
+python -c "import app;app.deploy(host='0.0.0.0', port=5200, blockchain='sxp')"
+```
+
+### Database management
+  > venv activated
+```sh
+python -c "import app;app.clean('sxp')"
+python -c "import app;app.reset('sxp')"
+```
+
+### Webhook management
+  > venv activated
+```sh
+python -c "import app;app.init('sxp');app.sync.chain.subscribe()"
+python -c "import app;app.init('sxp');app.sync.chain.unsubscribe()"
+```
+
+### Logging
+```sh
+journalctl -u slp -ef
+journalctl -u slpapi -ef
+```
+
+### Start / stop
+```sh
+sudo systemctl start slp
+sudo systemctl start slpapi
+sudo systemctl stop slp
+sudo systemctl stop slpapi
+sudo systemctl restart slp
+sudo systemctl restart slpapi
+```
+"""
+
 import io
 import os
 import re
@@ -12,12 +63,14 @@ import logging.handlers
 from usrv import srv, req
 from pymongo import MongoClient
 from bson.decimal128 import Decimal128
-from slp import sync, node, msg, dbapi, api
+from slp import sync, node, dbapi
 
 
 def init(name, **overrides):
+    """
+    Initialize a blockchain configuration.
+    """
     slp.JSON.load(name, **overrides)
-    database_name = slp.JSON["database name"]
     slp.REGEXP = re.compile(slp.JSON["serialized regex"])
     slp.INPUT_TYPES = slp.JSON.ask("input types")
     slp.TYPES_INPUT = dict([v, k] for k, v in slp.INPUT_TYPES.items())
@@ -33,6 +86,7 @@ def init(name, **overrides):
     # TODO: add log rotation parameters to slp.json
     slp.LOG.handlers.clear()
     slp.LOG.setLevel(slp.JSON.get("log level", "DEBUG"))
+    database_name = slp.JSON["database name"]
     logpath = os.path.join(slp.ROOT, ".log", f"{database_name}.log")
     os.makedirs(os.path.dirname(logpath), exist_ok=True)
     slp.LOG.addHandler(
@@ -55,6 +109,35 @@ def init(name, **overrides):
             lambda v, de=reccord.get('de', 0): Decimal128(f"%.{de}f" % v)
     # update peer limit in node module
     node.PEER_LIMIT = slp.JSON.get("peer limit", 10)
+
+
+def clean(name):
+    slp.LOG.info("Stopping slp...")
+    os.system("sudo systemctl stop slp")
+    os.system("sudo systemctl stop slpapi")
+    init(name)
+    slp.LOG.info("Dropping databases...")
+    dbapi.db.contracts.drop()
+    dbapi.db.rejected.drop()
+    dbapi.db.slp1.drop()
+    dbapi.db.slp2.drop()
+    markfolder = os.path.join(slp.ROOT, ".json")
+    markname = f"{slp.JSON['database name']}.mark"
+    mark = slp.loadJson(markname, markfolder)
+    mark["rebuild"] = True
+    slp.dumpJson(mark, markname, markfolder)
+    return mark
+
+
+def reset(name):
+    mark = clean(name)
+    dbapi.db.journal.drop()
+    mark.pop("last parsed block", False)
+    mark.pop("rebuild", False)
+    markfolder = os.path.join(slp.ROOT, ".json")
+    markname = f"{slp.JSON['database name']}.mark"
+    slp.dumpJson(mark, markname, markfolder)
+    slp.LOG.info("Reset done")
 
 
 def deploy(host="127.0.0.1", port=5200, blockchain="sxp"):
@@ -119,14 +202,15 @@ WantedBy=multi-user.target
 class SlpApp(srv.uJsonApp):
 
     def __init__(self, host="127.0.0.1", port=5200, **options):
+        from slp import msg
         slp.PORT = port
         init(options.get("blockchain", "sxp"))
         srv.uJsonApp.__init__(
             self, host, port, loglevel=options.get("loglevel", 20)
         )
-        sync.Processor()  # --> will start a BlockParser
+        sync.Processor()  # --> will start BlockParser on exit
         node.Broadcaster()
-        node.Topology()
+        node.Topology()  # --> will exit itseld
         msg.Messenger()
         signal.signal(signal.SIGTERM, SlpApp.kill)
 
@@ -141,6 +225,7 @@ class SlpApp(srv.uJsonApp):
 class SlpApi(srv.uJsonApp):
 
     def __init__(self, host="127.0.0.1", port=5100, **options):
+        from slp import api
         slp.PORT = port
         init(options.get("blockchain", "sxp"))
         srv.uJsonApp.__init__(
@@ -154,6 +239,7 @@ class SlpApi(srv.uJsonApp):
 
 if __name__ == "__main__":
     # FOR TESTING PURPOSE ONLY ---
+    from slp import msg
 
     parser = srv.OptionParser(
         usage="usage: %prog [options] BINDINGS...",
