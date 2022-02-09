@@ -340,6 +340,23 @@ class BlockParser(threading.Thread):
         slp.LOG.info("BlockParser %s set", id(self))
 
     @staticmethod
+    def apply(contract):
+        module = f"slp.{contract['slp_type'][1:]}"
+        try:
+            if module not in sys.modules:
+                importlib.__import__(module)
+            sys.modules[module].manage(contract)
+        except ImportError:
+            slp.LOG.info(
+                "No modules found to handle '%s' contracts",
+                contract['slp_type']
+            )
+        except Exception as error:
+            slp.LOG.error(
+                "%r\n%s", error, traceback.format_exc()
+            )
+
+    @staticmethod
     def stop():
         if BlockParser.LOCK.locked():
             BlockParser.LOCK.release()
@@ -381,19 +398,6 @@ class BlockParser(threading.Thread):
                     BlockParser.LOCK.release()
                     # atomic action is stopped for sure ---
                     for contract in contracts:
-                        module = f"slp.{contract['slp_type'][1:]}"
-                        try:
-                            if module not in sys.modules:
-                                importlib.__import__(module)
-                            sys.modules[module].manage(contract)
-                        except ImportError:
-                            slp.LOG.info(
-                                "No modules found to handle '%s' contracts",
-                                contract['slp_type']
-                            )
-                        except Exception as error:
-                            slp.LOG.error(
-                                "%r\n%s", error, traceback.format_exc()
-                            )
+                        BlockParser.apply(contract)
             else:
                 slp.LOG.info("BlockParser %s clean exit", id(self))

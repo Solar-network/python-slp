@@ -34,6 +34,14 @@ class Processor(threading.Thread):
         markfolder = os.path.join(slp.ROOT, ".json")
         markname = f"{slp.JSON['database name']}.mark"
         mark = slp.loadJson(markname, markfolder)
+        # rebuild databases if marker found
+        if mark.get("rebuild", False):
+            slp.LOG.info("Rebuilding databases from journal")
+            for contract in dbapi.db.journal.find({}).sort("_id", 1):
+                contract["legit"] = None
+                chain.BlockParser.apply(contract)
+            mark.pop("rebuild")
+            slp.dumpJson(mark, markname, markfolder)
         # get last good peer if any else choose a random one
         peers = chain.select_peers()
         peer = mark.get("peer", random.choice(peers))
