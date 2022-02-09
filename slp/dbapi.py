@@ -38,11 +38,12 @@ def blockstamp_cmp(a, b):
 
 
 def compute_poh(name, last_poh=None, **data):
-    collection = getattr(db, name)
-    # if no previous poh given, get last from journal
+    col = getattr(db, name)
+    # if no previous poh given, get last from collection
     if last_poh is None:
         try:
-            last_poh = collection.find().sort("_id", -1)[0].get("poh", "")
+            filters = {"legit": True} if col == "journal" else {}
+            last_poh = col.find(filters).sort("_id", -1)[0].get("poh", "")
         except Exception:
             last_poh = ""
     # data could be slp fields or consent message containing slp fields hash
@@ -228,6 +229,8 @@ def token_details(tokenId):
     """
     Compute token details using mongo db aggregations.
     """
+    global TOKEN_DETAILS_AGGREGATION
+
     match = {'$match': {'tokenId': {'$eq': tokenId}}}
     reccord_lookup = {
         '$lookup': {
@@ -317,6 +320,11 @@ def token_details(tokenId):
             }
         }
     }
-    return list(db.contracts.aggregate(
-        [match, reccord_lookup] + slp_lookup + [add_fields, project]
-    ))
+    try:
+        result = list(db.contracts.aggregate(TOKEN_DETAILS_AGGREGATION))
+    except Exception:
+        TOKEN_DETAILS_AGGREGATION = [match, reccord_lookup] + \
+            slp_lookup + [add_fields, project]
+        result = list(db.contracts.aggregate(TOKEN_DETAILS_AGGREGATION))
+    finally:
+        return result
