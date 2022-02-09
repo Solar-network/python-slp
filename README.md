@@ -36,24 +36,35 @@ sudo systemctl enable slp.service
 
   * [x] node ip where `python-slp` is installed has to be whitelisted by the relay
 
-## Custom deployment
+## Virtual environment
 
-`python-slp` is configured on port 5200 and 5100. To deploy node and api with a specific `Ark-fork`, edit `<name>.json` files in package directory according to  the targeted blockchain and deploy:
+`python-slp` runs in its own environment. To interact with it, it has to be activated:
 
 ```sh
-python -c "import app;app.deploy(host='0.0.0.0', port=5243, blockchain='name')"
-python -c "import slp.api;slp.api.deploy(host='0.0.0.0', port=5124, blockchain='name')"
+. .local/share/slp/venv/bin/activate
 ```
 
-Where `name` is the basename of json configuration used to store specific blockchain parameters.
+## Database management
+
+Remove secondary databases:
+
+```sh
+python -c "import app;app.clean('sxp')"
+```
+
+Remove all databases:
+
+```sh
+python -c "import app;app.reset('sxp')"
+```
 
 ## Webhook management
 
-Webhook subsciption is done on `python-slp` launch. It can also be created/removed with:
+Webhook subscription is done on `python-slp` launch. It can also be created/removed with:
 
 ```sh
-python -c "import app;app.init('name');app.sync.chain.subscribe()"
-python -c "import app;app.init('name');app.sync.chain.unsubscribe()"
+python -c "import app;app.init('sxp');app.sync.chain.subscribe()"
+python -c "import app;app.init('sxp');app.sync.chain.unsubscribe()"
 ```
 
 ## API endpoint for slp database
@@ -112,6 +123,16 @@ curl http://127.0.0.1:5100/slp2/find?tokenId=0c1b5ed5cff799a0dee2cadc6d02ac60
   ]
 }
 ```
+
+## Custom deployment
+
+`python-slp` is configured on port 5200 and 5100. To deploy node and api with a specific `Ark-fork`, create and edit `<name>.json` and `milestones.json` in package directory accordingly. Then, to deploy on custom port 5243 and 5143:
+
+```sh
+python -c "import app;app.deploy(host='0.0.0.0', port=5243, blockchain='name')"
+```
+
+Where `name` is the basename of json configuration used to store specific blockchain parameters.
 
 # Releases
 

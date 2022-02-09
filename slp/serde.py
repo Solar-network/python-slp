@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
 """
-(c) THOORENS Bruno MIT Licence
 Improvment of Side Level Protocol smartbridge use.
 """
 
