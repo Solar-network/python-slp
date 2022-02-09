@@ -108,12 +108,12 @@ def lookup(collection, **kw):
         )
         return {"status": 501, "msg": "Internal Error: %r" % error}
 
+
 ###########
 # SLP API #
 ###########
 # TODO: https://aslp.qredit.dev
 # TODO: https://github.com/Qredit/qslp/blob/ark/public/aslp_openapi3.yaml
-
 
 @srv.bind("/api/status", methods=["GET"], app=srv.uJsonHandler)
 def status():
@@ -161,7 +161,16 @@ def tokens(page=1, limit=50):
 def token(tokenId):
     token = dbapi.token_details(tokenId)
     if len(token):
-        return token[0]
+        token = token[0]
+        if token["type"][-1] in ["2", ]:
+            metadata = {}
+            for reccord in [
+                r for r in dbapi.db.slp2.find()
+                if "metadata" in r
+            ]:
+                metadata.update(serde._unpack_meta(reccord["metadata"]))
+            token["metadata"] = metadata
+        return token
     else:
         return {"status": 400, "msg": "token %s not found" % tokenId}
 
@@ -173,7 +182,16 @@ def token_by_txid(txId):
         return {"status": 400, "msg": "%s is not a SLP transaction" % txId}
     token = dbapi.token_details(reccord["id"])
     if len(token):
-        return token[0]
+        token = token[0]
+        if token["type"][-1] in ["2", ]:
+            metadata = {}
+            for reccord in [
+                r for r in dbapi.db.slp2.find()
+                if "metadata" in r
+            ]:
+                metadata.update(serde._unpack_meta(reccord["metadata"]))
+            token["metadata"] = metadata
+        return token
     else:
         return {"status": 400, "msg": "token %s not found" % reccord["id"]}
 
@@ -208,23 +226,20 @@ def token_by_owner(addr, page=1, limit=50):
     }
 
 
-@srv.bind(
-    "/api/tokenWithMeta/<str:tokenId>", methods=["GET"], app=srv.uJsonHandler
-)
-def token_with_meta(tokenId):
-    token = dbapi.token_details(tokenId)
-    if len(token):
-        token = token[0]
-        token["metadata"] = {}
-        for reccord in [
-            r for r in dbapi.db.slp2.find({"tokenId": tokenId})
-            if "metadata" in r
-        ]:
-            token["metadata"].update(serde._unpack_meta(reccord["metadata"]))
-        return token
-    else:
-        return {"status": 400, "msg": "token %s not found" % tokenId}
+# "/addresses"
+# "/addresses/{address}"
+# "/addressesByTokenId/{tokenid}"
 
+# "/balance/{tokenid}/{address}"
+
+# "/transactions"
+# "/transaction/{txid}"
+# "/transactions/{tokenid}"
+# "/transactions/{tokenid}/{address}"
+
+# "/metadata/{txid}"
+# "/metadata/{tokenid}"
+# "/metadata/{tokenid}/{address}"
 
 ####################
 # SMARTBRIDGES API #
@@ -237,7 +252,7 @@ def slp1_smartbridge(tp, **kw):
             [k, v] for k, v in kw.items()
             if k in slp.JSON.ask("slp fields")
         )
-        return {"smartBridge": serde.pack_slp1(tp, **fields)}
+        return {"smartBridge": serde.pack_slp1(tp.upper(), **fields)}
     except Exception as error:
         slp.LOG.error(
             "Error trying to compute : %s\n%s", kw, traceback.format_exc()
@@ -252,7 +267,7 @@ def slp2_smartbridge(tp, **kw):
             [k, v] for k, v in kw.items()
             if k in slp.JSON.ask("slp fields")
         )
-        return {"smartBridge": serde.pack_slp2(tp, **fields)}
+        return {"smartBridge": serde.pack_slp2(tp.upper(), **fields)}
     except Exception as error:
         slp.LOG.error(
             "Error trying to compute : %s\n%s", kw, traceback.format_exc()
@@ -267,7 +282,11 @@ def slp1_vendorfield(tp, **kw):
             [k, v] for k, v in kw.items()
             if k in slp.JSON.ask("slp fields")
         )
-        return {"vendorField": serde.unpack_slp(serde.pack_slp1(tp, **fields))}
+        return {
+            "vendorField": serde.unpack_slp(
+                serde.pack_slp1(tp.upper(), **fields)
+            )
+        }
     except Exception as error:
         slp.LOG.error(
             "Error trying to compute : %s\n%s", kw, traceback.format_exc()
@@ -282,7 +301,11 @@ def slp2_vendorfield(tp, **kw):
             [k, v] for k, v in kw.items()
             if k in slp.JSON.ask("slp fields")
         )
-        return {"vendorField": serde.unpack_slp(serde.pack_slp2(tp, **fields))}
+        return {
+            "vendorField": serde.unpack_slp(
+                serde.pack_slp2(tp.upper(), **fields)
+            )
+        }
     except Exception as error:
         slp.LOG.error(
             "Error trying to compute : %s\n%s", kw, traceback.format_exc()
