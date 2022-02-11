@@ -229,8 +229,6 @@ def token_details(tokenId):
     """
     Compute token details using mongo db aggregations.
     """
-    global TOKEN_DETAILS_AGGREGATION
-
     match = {'$match': {'tokenId': {'$eq': tokenId}}}
     reccord_lookup = {
         '$lookup': {
@@ -320,11 +318,39 @@ def token_details(tokenId):
             }
         }
     }
-    try:
-        result = list(db.contracts.aggregate(TOKEN_DETAILS_AGGREGATION))
-    except Exception:
-        TOKEN_DETAILS_AGGREGATION = [match, reccord_lookup] + \
-            slp_lookup + [add_fields, project]
-        result = list(db.contracts.aggregate(TOKEN_DETAILS_AGGREGATION))
-    finally:
-        return result
+    return db.contracts.aggregate(
+        [match, reccord_lookup] + slp_lookup + [add_fields, project]
+    )
+
+
+def wallets(address=None):
+    ppln = [{'$match': {"address": address}}] if address is not None else []
+    return db.contracts.aggregate(
+        [
+            {'$limit': 1},
+            {'$project': {'_id': '$$REMOVE'}}
+        ] + [
+            {'$lookup': {'from': col[1:], 'pipeline': ppln, 'as': col}}
+            for col in slp.JSON.ask("slp types")
+        ] + [
+            {
+                '$project': {
+                    'union': {
+                        '$concatArrays':
+                        ['$%s' % n for n in slp.JSON.ask("slp types")]
+                    }
+                }
+            },
+            {'$unwind': '$union'},
+            {'$replaceRoot': {'newRoot': '$union'}},
+            {
+                '$addFields': {
+                    'balance': {'$toDouble': {'$getField': 'balance'}}
+                }
+            },
+            {'$project': {
+                '_id': 0, 'address': 1, 'balance': 1, 'tokenId': 1, 'owner': 1,
+                'frozen': 1, 'blockStamp': 1
+            }}
+        ]
+    )

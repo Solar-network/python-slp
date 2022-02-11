@@ -142,8 +142,8 @@ def tokens(page=1, limit=50):
 
     data = functools.reduce(
         lambda a, b: a + b, [
-            dbapi.token_details(contract["tokenId"])
-            for contract in cursor.limit(min(100, limit))
+            list(dbapi.token_details(contract["tokenId"]))
+            for contract in cursor.limit(min(50, limit))
         ], []
     )
     return {
@@ -159,7 +159,7 @@ def tokens(page=1, limit=50):
 
 @srv.bind("/api/token/<str:tokenId>", methods=["GET"], app=srv.uJsonHandler)
 def token(tokenId):
-    token = dbapi.token_details(tokenId)
+    token = list(dbapi.token_details(tokenId))
     if len(token):
         token = token[0]
         if token["type"][-1] in ["2", ]:
@@ -180,7 +180,7 @@ def token_by_txid(txId):
     reccord = dbapi.find_reccord(txid=txId)
     if reccord is None:
         return {"status": 400, "msg": "%s is not a SLP transaction" % txId}
-    token = dbapi.token_details(reccord["id"])
+    token = list(dbapi.token_details(reccord["id"]))
     if len(token):
         token = token[0]
         if token["type"][-1] in ["2", ]:
@@ -199,7 +199,7 @@ def token_by_txid(txId):
 @srv.bind(
     "/api/tokensByOwner/<str:addr>", methods=["GET"], app=srv.uJsonHandler
 )
-def token_by_owner(addr, page=1, limit=50):
+def tokens_by_owner(addr, page=1, limit=50):
     page = int(page)
     limit = int(limit)
     # computes count and execute first filter
@@ -211,7 +211,7 @@ def token_by_owner(addr, page=1, limit=50):
 
     data = functools.reduce(
         lambda a, b: a + b, [
-            dbapi.token_details(contract["tokenId"])
+            list(dbapi.token_details(contract["tokenId"]))
             for contract in cursor.limit(min(100, limit))
         ], []
     )
@@ -226,8 +226,51 @@ def token_by_owner(addr, page=1, limit=50):
     }
 
 
-# "/addresses"
-# "/addresses/{address}"
+@srv.bind("/api/addresses", methods=["GET"], app=srv.uJsonHandler)
+def addresses(page=1, limit=100):
+    page = int(page)
+    limit = int(limit)
+    # computes count and execute first filter
+    aggregation = list(dbapi.wallets())
+    total = len(aggregation)
+    pages = int(math.ceil(total / float(limit)))
+    # jump to asked page
+    start = (page-1) * limit
+    data = aggregation[start:start + min(100, limit)]
+    return {
+        "meta": {
+            "count": len(data),
+            "totalCount": total,
+            "page": page,
+            "pageCount": pages
+        },
+        "data": data
+    }
+
+
+@srv.bind(
+    "/api/addresses/<str:address>", methods=["GET"], app=srv.uJsonHandler
+)
+def addresse(address, page=1, limit=100):
+    page = int(page)
+    limit = int(limit)
+    # computes count and execute first filter
+    aggregation = list(dbapi.wallets(address))
+    total = len(aggregation)
+    pages = int(math.ceil(total / float(limit)))
+    # jump to asked page
+    start = (page-1) * limit
+    data = aggregation[start:start + min(100, limit)]
+    return {
+        "meta": {
+            "count": len(data),
+            "totalCount": total,
+            "page": page,
+            "pageCount": pages
+        },
+        "data": data
+    }
+
 # "/addressesByTokenId/{tokenid}"
 
 # "/balance/{tokenid}/{address}"
@@ -245,46 +288,21 @@ def token_by_owner(addr, page=1, limit=50):
 # SMARTBRIDGES API #
 ####################
 
-@srv.bind("/smartBridge/slp1/<str:tp>", methods=["GET"], app=srv.uJsonHandler)
-def slp1_smartbridge(tp, **kw):
+@srv.bind(
+    "/smartBridge/<str:slp_type>/<str:tp>",
+    methods=["GET"], app=srv.uJsonHandler
+)
+def slp_smartbridge(slp_type, tp, **kw):
     try:
         fields = dict(
             [k, v] for k, v in kw.items()
             if k in slp.JSON.ask("slp fields")
         )
-        return {"smartBridge": serde.pack_slp1(tp.upper(), **fields)}
-    except Exception as error:
-        slp.LOG.error(
-            "Error trying to compute : %s\n%s", kw, traceback.format_exc()
-        )
-        return {"status": 501, "msg": "Internal Error: %r" % error}
-
-
-@srv.bind("/smartBridge/slp2/<str:tp>", methods=["GET"], app=srv.uJsonHandler)
-def slp2_smartbridge(tp, **kw):
-    try:
-        fields = dict(
-            [k, v] for k, v in kw.items()
-            if k in slp.JSON.ask("slp fields")
-        )
-        return {"smartBridge": serde.pack_slp2(tp.upper(), **fields)}
-    except Exception as error:
-        slp.LOG.error(
-            "Error trying to compute : %s\n%s", kw, traceback.format_exc()
-        )
-        return {"status": 501, "msg": "Internal Error: %r" % error}
-
-
-@srv.bind("/vendorField/slp1/<str:tp>", methods=["GET"], app=srv.uJsonHandler)
-def slp1_vendorfield(tp, **kw):
-    try:
-        fields = dict(
-            [k, v] for k, v in kw.items()
-            if k in slp.JSON.ask("slp fields")
-        )
+        for key in [k for k in ["pa", "mi"] if k in fields]:
+            fields[key] = fields[key] in ["TRUE", "True", "true", "1", 1, True]
         return {
-            "vendorField": serde.unpack_slp(
-                serde.pack_slp1(tp.upper(), **fields)
+            "smartBridge": getattr(serde, "pack_%s" % slp_type)(
+                tp.upper(), **fields
             )
         }
     except Exception as error:
@@ -294,16 +312,21 @@ def slp1_vendorfield(tp, **kw):
         return {"status": 501, "msg": "Internal Error: %r" % error}
 
 
-@srv.bind("/vendorField/slp2/<str:tp>", methods=["GET"], app=srv.uJsonHandler)
-def slp2_vendorfield(tp, **kw):
+@srv.bind(
+    "/vendorField/<str:slp_type>/<str:tp>",
+    methods=["GET"], app=srv.uJsonHandler
+)
+def slp_vendorfield(slp_type, tp, **kw):
     try:
         fields = dict(
             [k, v] for k, v in kw.items()
             if k in slp.JSON.ask("slp fields")
         )
+        for key in [k for k in ["pa", "mi"] if k in fields]:
+            fields[key] = fields[key] in ["TRUE", "True", "true", "1", 1, True]
         return {
             "vendorField": serde.unpack_slp(
-                serde.pack_slp2(tp.upper(), **fields)
+                getattr(serde, "pack_%s" % slp_type)(tp.upper(), **fields)
             )
         }
     except Exception as error:
