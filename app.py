@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
 """
-
 # Ubuntu app deployment
 
 `app` module deploys and runs `python-slp` node and API. It is deployed behind
@@ -216,6 +215,7 @@ class SlpApp(srv.uJsonApp):
 
     @staticmethod
     def kill(*args, **kwargs):
+        from slp import msg
         sync.Processor.stop()
         node.Broadcaster.stop()
         msg.Messenger.stop()
