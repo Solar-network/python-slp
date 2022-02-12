@@ -323,8 +323,9 @@ def token_details(tokenId):
     )
 
 
-def wallets(address=None):
+def wallets(address=None, tokenId=None):
     ppln = [{'$match': {"address": address}}] if address is not None else []
+    ppln += [{'$match': {"tokenId": tokenId}}] if tokenId is not None else []
     return db.contracts.aggregate(
         [
             {'$limit': 1},

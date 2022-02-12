@@ -8,7 +8,8 @@ import functools
 from usrv import srv
 from slp import dbapi, serde
 
-DECIMAL128_FIELDS = "balance,minted,burned,crossed,globalSupply".split(",")
+DECIMAL128_FIELDS = "balance,minted,burned,exited,crossed," \
+                    "globalSupply".split(",")
 OPERATOR_FIELDS = "balance,minted,burned,crossed,globalSupply,qt".split(",")
 SEARCH_FIELDS = "address,tokenId,blockStamp,owner,frozen," \
                 "slp_type,emitter,receiver,legit,tp,sy,id,pa,mi," \
@@ -227,11 +228,11 @@ def tokens_by_owner(addr, page=1, limit=50):
 
 
 @srv.bind("/api/addresses", methods=["GET"], app=srv.uJsonHandler)
-def addresses(page=1, limit=100):
+def addresses(page=1, limit=100, **kw):
     page = int(page)
     limit = int(limit)
     # computes count and execute first filter
-    aggregation = list(dbapi.wallets())
+    aggregation = list(dbapi.wallets(tokenId=kw.get("tokenId", None)))
     total = len(aggregation)
     pages = int(math.ceil(total / float(limit)))
     # jump to asked page
@@ -251,7 +252,7 @@ def addresses(page=1, limit=100):
 @srv.bind(
     "/api/addresses/<str:address>", methods=["GET"], app=srv.uJsonHandler
 )
-def addresse(address, page=1, limit=100):
+def address(address, page=1, limit=100):
     page = int(page)
     limit = int(limit)
     # computes count and execute first filter
@@ -271,9 +272,18 @@ def addresse(address, page=1, limit=100):
         "data": data
     }
 
-# "/addressesByTokenId/{tokenid}"
 
-# "/balance/{tokenid}/{address}"
+@srv.bind(
+    "/api/balance/<str:tokenId>/<str:address>",
+    methods=["GET"], app=srv.uJsonHandler
+)
+def balance(address, tokenId, page=1, limit=100, **kw):
+    aggregation = list(dbapi.wallets(address, tokenId))
+    if len(aggregation):
+        return {"balance": aggregation[0]["balance"]}
+    else:
+        return {"status": 400, "msg": "balance not found"}
+
 
 # "/transactions"
 # "/transaction/{txid}"
