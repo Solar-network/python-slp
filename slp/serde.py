@@ -67,21 +67,21 @@ def pack_slp1_genesis(de, qt, sy, na, du="", no="", pa=False, mi=False):
 
 def pack_slp1_fungible(tb, id, qt, no=""):
     fixed = struct.pack(
-        "<B16sQ", slp.INPUT_TYPES[tb], binascii.unhexlify(id), qt
+        "<B16sd", slp.INPUT_TYPES[tb], binascii.unhexlify(id), float(qt)
     )
     varia = _pack_varia(no)
     return slp.SLP1 + "://" + binascii.hexlify(fixed).decode() + varia.decode()
 
 
 def pack_slp1_non_fungible(tb, id, no=""):
-    fixed = struct.pack("<B16sQ", slp.INPUT_TYPES[tb], binascii.unhexlify(id))
+    fixed = struct.pack("<B16s", slp.INPUT_TYPES[tb], binascii.unhexlify(id))
     varia = _pack_varia(no)
     return slp.SLP1 + "://" + binascii.hexlify(fixed).decode() + varia.decode()
 
 
 # -- SLP2 SERIALIZATION --
 def pack_slp2_genesis(sy, na, du="", no="", pa=False):
-    fixed = struct.pack("<B?", slp.INPUT_TYPES["GENESIS"], pa)
+    fixed = struct.pack("<B?", slp.INPUT_TYPES["GENESIS"], bool(pa))
     varia = _pack_varia(sy, na, du, no)
     return slp.SLP2 + "://" + binascii.hexlify(fixed).decode() + varia.decode()
 
@@ -147,11 +147,11 @@ def unpack_slp1_genesis(data):
 
 
 def unpack_slp1_fungible(data):
-    n = int(struct.calcsize("<B16sQ") * 2)
+    n = int(struct.calcsize("<B16sd") * 2)
     fixed = binascii.unhexlify(data[:n])
     varia = data[n:].encode()
     result = dict(
-        zip(["tp", "id", "qt"], struct.unpack("<B16sQ", fixed)),
+        zip(["tp", "id", "qt"], struct.unpack("<B16sd", fixed)),
         **_unpack_varia(varia, "no")
     )
     result["id"] = binascii.hexlify(result["id"]).decode()
