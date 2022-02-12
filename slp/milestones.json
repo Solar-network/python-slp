@@ -22,10 +22,10 @@
         },
         "cost": {
             "sslp1": {
-                "GENESIS": 100000000
+                "GENESIS": 500000000
             },
             "sslp2": {
-                "GENESIS": 100000000
+                "GENESIS": 500000000
             }
         }
     }
