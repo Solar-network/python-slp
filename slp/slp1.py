@@ -23,12 +23,16 @@ def manage(contract, **options):
             sys.modules[__name__], "apply_%s" % contract["tp"].lower()
         )(contract, **options)
         if result is False:
+            dbapi.db.journal.delete_one({"_id": contract["_id"]})
             dbapi.db.rejected.insert_one(contract)
         return result
     except AssertionError:
         slp.LOG.error("Contract %s already applied", contract)
     except AttributeError:
         slp.LOG.error("Unknown contract type %s", contract["tp"])
+    except Exception as error:
+        slp.LOG.error("SLP1 exec - Error occured: %s", traceback.format_exc())
+        slp.LOG.error("Error occured %r", error)
 
 
 def apply_genesis(contract, **options):
@@ -91,7 +95,7 @@ def apply_burn(contract, **options):
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
         # burned quantity should avoid decimal part
-        assert contract["qt"].to_decimal() % 1 == 0
+        assert contract["qt"] % 1 == 0
         # BURN contract have to be sent to master address
         assert contract["receiver"] == slp.JSON["master address"]
         # get contract and wallet
@@ -110,7 +114,7 @@ def apply_burn(contract, **options):
         # check if contract blockstamp higher than wallet one
         assert dbapi.blockstamp_cmp(blockstamp, wallet["blockStamp"])
         # owner may burn only from his balance
-        assert wallet["balance"].to_decimal() >= contract["qt"]
+        assert float(wallet["balance"].to_decimal()) >= contract["qt"]
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
@@ -126,7 +130,7 @@ def apply_burn(contract, **options):
             dbapi.update_slp1_wallet(
                 contract["emitter"], tokenId, dict(
                     blockStamp=blockstamp, balance=_decimal128(
-                        wallet["balance"].to_decimal() - contract["qt"]
+                        float(wallet["balance"].to_decimal()) - contract["qt"]
                     )
                 )
             ),
@@ -135,7 +139,7 @@ def apply_burn(contract, **options):
                 tokenId, dict(
                     height=contract["height"], index=contract["index"],
                     burned=_decimal128(
-                        token["burned"].to_decimal() + contract["qt"]
+                        float(token["burned"].to_decimal()) + contract["qt"]
                     )
                 )
             )
@@ -151,9 +155,9 @@ def apply_mint(contract, **options):
     try:
         # GENESIS check ---
         reccord = dbapi.find_reccord(id=tokenId, tp="GENESIS")
-        assert reccord is not None and reccord["mintable"] is True
+        assert reccord is not None and reccord["mi"] is True
         # minted quantity should avoid decimal part
-        assert contract["qt"].to_decimal() % 1 == 0
+        assert contract["qt"] % 1 == 0
         # BURN contract have to be sent to master address
         assert contract["receiver"] == slp.JSON["master address"]
         token = dbapi.find_contract(tokenId=tokenId)
@@ -176,7 +180,7 @@ def apply_mint(contract, **options):
             token["crossed"].to_decimal()
         )
         allowed_supply = token["globalSupply"].to_decimal()
-        assert current_supply + contract["qt"] <= allowed_supply
+        assert float(current_supply) + contract["qt"] <= float(allowed_supply)
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
@@ -192,7 +196,7 @@ def apply_mint(contract, **options):
             dbapi.update_slp1_wallet(
                 contract["emitter"], tokenId, dict(
                     blockStamp=blockstamp, balance=slp.DECIMAL128[tokenId](
-                        wallet["balance"].to_decimal() + contract["qt"]
+                        float(wallet["balance"].to_decimal()) + contract["qt"]
                     )
                 )
             ),
@@ -201,7 +205,7 @@ def apply_mint(contract, **options):
                 tokenId, dict(
                     height=contract["height"], index=contract["index"],
                     minted=_decimal128(
-                        token["minted"].to_decimal() + contract["qt"]
+                        float(token["minted"].to_decimal()) + contract["qt"]
                     )
                 )
             )
