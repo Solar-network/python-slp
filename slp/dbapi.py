@@ -7,9 +7,6 @@ import hashlib
 import decimal
 import traceback
 
-from datetime import datetime
-from pymongo import MongoClient
-
 # mongo database to be initialized by slp app
 db = None
 
@@ -269,7 +266,9 @@ def token_details(tokenId):
                 'ownerAddress': '$owner',
                 'tokenIdHex': '$tokenId',
                 'versionType': '$_type',
-                'genesis_timestamp_unix': '$timestamp',
+                'genesis_timestamp_unix': {
+                    '$getField': {'field': 'timestamp', 'input': '$_0'}
+                },
                 'symbol': '$symbol',
                 'documentUri': '$document',
                 'genesisQuantity': {
@@ -300,7 +299,7 @@ def token_details(tokenId):
                 'qty_token_crossed': '$_crossed',
                 'qty_token_circulating_supply': {
                     '$cond': [
-                        {'$eq': ['$_type', 'slp1']}, {
+                        {'$eq': ['$_type', '1']}, {
                             '$subtract': [
                                 {'$subtract': ['$_minted', '$_burned']},
                                 '$_crossed'

@@ -80,7 +80,7 @@ def find(collection, **kw):
         if "metadata" in reccord:
             reccord["metadata"] = serde._unpack_meta(reccord["metadata"])
         for key in [k for k in DECIMAL128_FIELDS if k in reccord]:
-            reccord[key] = str(reccord[key].to_decimal())
+            reccord[key] = float(reccord[key].to_decimal())
         data.append(reccord)
 
     return {
