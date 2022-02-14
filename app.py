@@ -117,6 +117,7 @@ def clean(name):
     init(name)
     slp.LOG.info("Dropping databases...")
     dbapi.db.contracts.drop()
+    dbapi.db.rejected.drop()
     dbapi.db.slp1.drop()
     dbapi.db.slp2.drop()
     markfolder = os.path.join(slp.ROOT, ".json")

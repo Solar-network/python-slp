@@ -23,16 +23,14 @@ def manage(contract, **options):
             sys.modules[__name__], "apply_%s" % contract["tp"].lower()
         )(contract, **options)
         if result is False:
-            dbapi.db.journal.delete_one({"_id": contract["_id"]})
             dbapi.db.rejected.insert_one(contract)
         return result
     except AssertionError:
         slp.LOG.error("Contract %s already applied", contract)
     except AttributeError:
         slp.LOG.error("Unknown contract type %s", contract["tp"])
-    except Exception as error:
+    except Exception:
         slp.LOG.error("SLP1 exec - Error occured: %s", traceback.format_exc())
-        slp.LOG.error("Error occured %r", error)
 
 
 def apply_genesis(contract, **options):

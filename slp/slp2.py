@@ -87,6 +87,8 @@ def manage(contract, **options):
         slp.LOG.error("Contract %s already applied", contract)
     except AttributeError:
         slp.LOG.error("Unknown contract type %s", contract["tp"])
+    except Exception:
+        slp.LOG.error("SLP2 exec - Error occured: %s", traceback.format_exc())
 
 
 def apply_genesis(contract, **options):
