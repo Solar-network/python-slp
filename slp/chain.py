@@ -211,13 +211,13 @@ def get_block_transactions(blockId, peer=None):
     return result
 
 
-def read_vendorField(vendorField):
+def read_vendorField(vendorField, height=None):
     contract = False
     try:
         contract = json.loads(vendorField)
     except Exception:
         try:
-            contract = serde.unpack_slp(vendorField)
+            contract = serde.unpack_slp(vendorField, height)
         except Exception:
             pass
     return False or contract
@@ -276,7 +276,7 @@ def parse_block(block, peer=None):
         t.get("vendorField", "") != ""
     ]:
         # try to read contract from vendor field
-        contract = read_vendorField(tx["vendorField"])
+        contract = read_vendorField(tx["vendorField"], height=block["height"])
         if contract:
             try:
                 slp_type, fields = list(contract.items())[0]

@@ -105,10 +105,9 @@ class Config(dict):
                 if type(merged[k]) != type(v):
                     raise Exception("Unmergeable data")
                 if isinstance(v, dict):
-                    merged[k].update(v)
+                    merged[k] = dict(merged[k], **v)
                 elif isinstance(v, list):
-                    merged[k].extend(v)
-                    merged[k] = list(set(merged[k]))
+                    merged[k] = list(merged[k] + v)
                 else:
                     merged[k] = v
             else:
@@ -128,9 +127,10 @@ class Config(dict):
 
         for milestone in sorted(milestones, key=lambda m: m["height"]):
             height = milestone.pop("height")
-            milestone = Config.merge_milestone(previous_milestone, milestone)
-            data["milestones"][height] = milestone
-            previous_milestone = milestone
+            previous_milestone = Config.merge_milestone(
+                previous_milestone, milestone
+            )
+            data["milestones"][height] = dict(previous_milestone)
 
         self.clear()
         self.update(dict(data, **overrides))

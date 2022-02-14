@@ -5,11 +5,14 @@
             "XQR", "BTC", "LTC", "BCH", "ETH", "EOS", "XRP", "USDT", "XMR",
             "DASH", "ETC", "ARK"
         ]
-    },
-    {
-        "schema version": "v15",
+    }, {
         "height": 400000,
+        "schema version": "v15",
         "slp types": ["sslp1", "sslp2"],
+        "slp formats": {
+            "sslp1": ["<BBQ??", "<B16sQ", "<B16s"],
+            "sslp2": ["<B?", "<B16s", "<B16s128s"]
+        },
         "slp fields": [
             "tp", "id", "de", "qt", "sy", "na", "du", "no", "pa", "mi", "ch",
             "dt"
@@ -27,6 +30,11 @@
             "sslp2": {
                 "GENESIS": 500000000
             }
+        }
+    }, {
+        "height": 476500,
+        "slp formats": {
+            "sslp1": ["<BBQ??", "<B16sd", "<B16s"]
         }
     }
 ]

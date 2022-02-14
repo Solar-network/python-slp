@@ -56,47 +56,55 @@ def _match_smartbridge(smartbridge):
 
 
 # -- SLP1 SERIALIZATION --
-def pack_slp1_genesis(de, qt, sy, na, du="", no="", pa=False, mi=False):
+def pack_slp1_genesis(
+    de, qt, sy, na, du="", no="", pa=False, mi=False, height=None
+):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP1][0]
     fixed = struct.pack(
-        "<BBQ??", slp.INPUT_TYPES["GENESIS"],
+        fixed_fmt, slp.INPUT_TYPES["GENESIS"],
         int(de), int(qt), bool(pa), bool(mi)
     )
     varia = _pack_varia(sy, na, du, no)
     return slp.SLP1 + "://" + binascii.hexlify(fixed).decode() + varia.decode()
 
 
-def pack_slp1_fungible(tb, id, qt, no=""):
+def pack_slp1_fungible(tb, id, qt, no="", height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP1][1]
     fixed = struct.pack(
-        "<B16sd", slp.INPUT_TYPES[tb], binascii.unhexlify(id), float(qt)
+        fixed_fmt, slp.INPUT_TYPES[tb], binascii.unhexlify(id), float(qt)
     )
     varia = _pack_varia(no)
     return slp.SLP1 + "://" + binascii.hexlify(fixed).decode() + varia.decode()
 
 
-def pack_slp1_non_fungible(tb, id, no=""):
-    fixed = struct.pack("<B16s", slp.INPUT_TYPES[tb], binascii.unhexlify(id))
+def pack_slp1_non_fungible(tb, id, no="", height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP1][2]
+    fixed = struct.pack(fixed_fmt, slp.INPUT_TYPES[tb], binascii.unhexlify(id))
     varia = _pack_varia(no)
     return slp.SLP1 + "://" + binascii.hexlify(fixed).decode() + varia.decode()
 
 
 # -- SLP2 SERIALIZATION --
-def pack_slp2_genesis(sy, na, du="", no="", pa=False):
-    fixed = struct.pack("<B?", slp.INPUT_TYPES["GENESIS"], bool(pa))
+def pack_slp2_genesis(sy, na, du="", no="", pa=False, height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP2][0]
+    fixed = struct.pack(fixed_fmt, slp.INPUT_TYPES["GENESIS"], bool(pa))
     varia = _pack_varia(sy, na, du, no)
     return slp.SLP2 + "://" + binascii.hexlify(fixed).decode() + varia.decode()
 
 
-def pack_slp2_non_fungible(tb, id, no=""):
-    fixed = struct.pack("<B16sQ", slp.INPUT_TYPES[tb], binascii.unhexlify(id))
+def pack_slp2_non_fungible(tp, id, no="", height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP2][1]
+    fixed = struct.pack(fixed_fmt, slp.INPUT_TYPES[tp], binascii.unhexlify(id))
     varia = _pack_varia(no)
     return slp.SLP2 + "://" + binascii.hexlify(fixed).decode() + varia.decode()
 
 
-def pack_slp2_addmeta(id, **data):
+def pack_slp2_addmeta(id, height=None, **data):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP2][1]
     metadata = sorted(data.items(), key=lambda i: len("%s%s" % i))
     # pack fixed size data
     fixed = struct.pack(
-        "<B16s", slp.INPUT_TYPES["ADDMETA"], binascii.unhexlify(id)
+        fixed_fmt, slp.INPUT_TYPES["ADDMETA"], binascii.unhexlify(id)
     )
     # smartbridge size - header size - 2*(fixed size + chunk size)
     spaceleft = 256 - len("_slp2://") - 2*(len(fixed) + 1)
@@ -125,33 +133,36 @@ def pack_slp2_addmeta(id, **data):
     ]
 
 
-def pack_slp2_voidmeta(id, tx):
+def pack_slp2_voidmeta(id, tx, height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP2][2]
     fixed = struct.pack(
-        "<B16s128s", slp.INPUT_TYPES["VOIDMETA"],
+        fixed_fmt, slp.INPUT_TYPES["VOIDMETA"],
         binascii.unhexlify(id), binascii.unhexlify(tx)
     )
     return slp.SLP2 + "://" + binascii.hexlify(fixed).decode()
 
 
 # -- SLP1 DESERIALIZATION --
-def unpack_slp1_genesis(data):
-    n = int(struct.calcsize("<BBQ??") * 2)
+def unpack_slp1_genesis(data, height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP1][0]
+    n = int(struct.calcsize(fixed_fmt) * 2)
     fixed = binascii.unhexlify(data[:n])
     varia = data[n:].encode()
     result = dict(
-        zip(["tp", "de", "qt", "pa", "mi"], struct.unpack("<BBQ??", fixed)),
+        zip(["tp", "de", "qt", "pa", "mi"], struct.unpack(fixed_fmt, fixed)),
         **_unpack_varia(varia, "sy", "na", "du", "no")
     )
     result["tp"] = slp.TYPES_INPUT[result["tp"]]
     return {slp.SLP1: result}
 
 
-def unpack_slp1_fungible(data):
-    n = int(struct.calcsize("<B16sd") * 2)
+def unpack_slp1_fungible(data, height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP1][1]
+    n = int(struct.calcsize(fixed_fmt) * 2)
     fixed = binascii.unhexlify(data[:n])
     varia = data[n:].encode()
     result = dict(
-        zip(["tp", "id", "qt"], struct.unpack("<B16sd", fixed)),
+        zip(["tp", "id", "qt"], struct.unpack(fixed_fmt, fixed)),
         **_unpack_varia(varia, "no")
     )
     result["id"] = binascii.hexlify(result["id"]).decode()
@@ -159,12 +170,13 @@ def unpack_slp1_fungible(data):
     return {slp.SLP1: result}
 
 
-def unpack_slp1_non_fungible(data):
-    n = int(struct.calcsize("<B16s") * 2)
+def unpack_slp1_non_fungible(data, height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP1][2]
+    n = int(struct.calcsize(fixed_fmt) * 2)
     fixed = binascii.unhexlify(data[:n])
     varia = data[n:].encode()
     result = dict(
-        zip(["tp", "id"], struct.unpack("<B16s", fixed)),
+        zip(["tp", "id"], struct.unpack(fixed_fmt, fixed)),
         **_unpack_varia(varia, "no")
     )
     result["id"] = binascii.hexlify(result["id"]).decode()
@@ -173,24 +185,26 @@ def unpack_slp1_non_fungible(data):
 
 
 # -- SLP2 DESERIALIZATION --
-def unpack_slp2_genesis(data):
-    n = int(struct.calcsize("<B?") * 2)
+def unpack_slp2_genesis(data, height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP2][0]
+    n = int(struct.calcsize(fixed_fmt) * 2)
     fixed = binascii.unhexlify(data[:n])
     varia = data[n:].encode()
     result = dict(
-        zip(["tp", "pa"], struct.unpack("<B?", fixed)),
+        zip(["tp", "pa"], struct.unpack(fixed_fmt, fixed)),
         **_unpack_varia(varia, "sy", "na", "du", "no")
     )
     result["tp"] = slp.TYPES_INPUT[result["tp"]]
     return {slp.SLP2: result}
 
 
-def unpack_slp2_non_fungible(data):
-    n = int(struct.calcsize("<B16s") * 2)
+def unpack_slp2_non_fungible(data, height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP2][1]
+    n = int(struct.calcsize(fixed_fmt) * 2)
     fixed = binascii.unhexlify(data[:n])
     varia = data[n:].encode()
     result = dict(
-        zip(["tp", "id"], struct.unpack("<B16s", fixed)),
+        zip(["tp", "id"], struct.unpack(fixed_fmt, fixed)),
         **_unpack_varia(varia, "no")
     )
     result["id"] = binascii.hexlify(result["id"]).decode()
@@ -198,12 +212,13 @@ def unpack_slp2_non_fungible(data):
     return {slp.SLP2: result}
 
 
-def unpack_slp2_addmeta(data):
-    n = int(struct.calcsize("<B16sB") * 2)
+def unpack_slp2_addmeta(data, height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP2][1] + "B"
+    n = int(struct.calcsize(fixed_fmt) * 2)
     fixed = binascii.unhexlify(data[:n])
     varia = data[n:].encode()
     result = dict(
-        zip(["tp", "id", "ch"], struct.unpack("<B16sB", fixed)),
+        zip(["tp", "id", "ch"], struct.unpack(fixed_fmt, fixed)),
         **{"dt": _unpack_meta(varia)}
     )
     result["id"] = binascii.hexlify(result["id"]).decode()
@@ -211,13 +226,11 @@ def unpack_slp2_addmeta(data):
     return {slp.SLP2: result}
 
 
-def unpack_slp2_voidmeta(data):
-    # n = int(struct.calcsize("<B16s128s") * 2)
+def unpack_slp2_voidmeta(data, height=None):
+    fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP2][2]
     fixed = binascii.unhexlify(data)
-    # varia = data[n:].encode()
     result = dict(
-        zip(["tp", "tx"], struct.unpack("<B16sB", fixed)),
-        # **_unpack_meta(varia)
+        zip(["tp", "tx"], struct.unpack(fixed_fmt, fixed)),
     )
     result["id"] = binascii.hexlify(result["id"]).decode()
     result["tx"] = binascii.hexlify(result["tx"]).decode()
@@ -282,9 +295,9 @@ def pack_slp2(*args, **kwargs):
         raise Exception("Bad smartbridge size (>256)")
 
 
-def unpack_slp(smartbridge):
+def unpack_slp(smartbridge, height=None):
     slp_type, data = _match_smartbridge(smartbridge)
-    slp_types = slp.JSON.ask("slp types")
+    slp_types = slp.JSON.ask("slp types", height)
     if slp_type not in slp_types:
         raise Exception(
             "Expecting %s contract, not %s" % (
@@ -292,4 +305,4 @@ def unpack_slp(smartbridge):
                 slp_type
             )
         )
-    return MAP[slp_type[1:]][data[:2]](data)
+    return MAP[slp_type[1:]][data[:2]](data, height)
