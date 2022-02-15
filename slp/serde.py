@@ -1,11 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-Improvment of Side Level Protocol smartbridge use.
-"""
-
 import slp
-
 import struct
 import binascii
 

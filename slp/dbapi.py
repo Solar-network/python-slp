@@ -307,7 +307,9 @@ def token_details(tokenId):
                         }, None
                     ]
                 },
-                'qty_total_spent': {'$sum': '$reccords.cost'}
+                'qty_total_spent': {
+                    '$divide': [{'$sum': '$reccords.cost'}, 100000000]
+                },
             },
             'lastUpdatedBlock': {
                 '$getField': {'field': 'height', 'input': {
@@ -351,6 +353,45 @@ def wallets(address=None, tokenId=None):
             {'$project': {
                 '_id': 0, 'address': 1, 'balance': 1, 'tokenId': 1, 'owner': 1,
                 'frozen': 1, 'blockStamp': 1
+            }}
+        ]
+    )
+
+
+def transactions(txid=None, tokenId=None, address=None):
+    ppln = [{'$match': {"txid": txid}}] if txid is not None else []
+    ppln += [{'$match': {"tokenId": tokenId}}] if tokenId is not None else []
+    ppln += [{'$match': {"emitter": address}}] if address is not None else []
+    return db.contracts.aggregate(
+        [
+            {'$limit': 1},
+            {'$project': {'_id': '$$REMOVE'}}
+        ] + [
+            {'$lookup': {'from': 'journal', 'pipeline': ppln, 'as': 'txs'}}
+        ] + [
+            {'$unwind': '$txs'},
+            {'$replaceRoot': {'newRoot': '$txs'}},
+            {'$project': {
+                '_id': 0, 'txid': 1,
+                'blockHeight': '$height',
+                'valid': '$legit',
+                'transactionDetails': {
+                    'proofOfHistory': '$poh',
+                    'transactionType': '$tp',
+                    'senderAddress': '$emitter',
+                    'tokenIdHex': '$id',
+                    'timestamp_unix': '$timestamp',
+                    'symbol': '$sy',
+                    'name': '$na',
+                    'dicumentUri': '$du',
+                    'decimals': '$de',
+                    'sendOutput': {
+                        'address': '$receiver',
+                        'amount': '$qt'
+                    },
+                    'note': '$no',
+                    'amount': {'$divide': ['$cost', 100000000]}
+                }
             }}
         ]
     )

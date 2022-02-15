@@ -16,6 +16,7 @@ A record in slp2 database is indexed by wallet address and token id.
 
 import slp
 import sys
+import json
 import traceback
 
 from slp import dbapi
@@ -282,6 +283,12 @@ def apply_addmeta(contract, **options):
         _token_check(tokenId)
         # EMITTER check ---
         emitter = _emitter_check(contract["emitter"], tokenId, blockstamp)
+        # try to read metadata using key/value pair in na/dt or json string in
+        # dt
+        if "na" in contract:
+            metadata = _pack_meta(**{contract["na"]: contract["dt"]})
+        else:
+            metadata = _pack_meta(json.loads(contract["dt"]))
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
@@ -294,10 +301,7 @@ def apply_addmeta(contract, **options):
             contract, dbapi.update_slp2_wallet(
                 emitter["address"], tokenId, dict(
                     blockStamp=blockstamp,
-                    metadata=(
-                        emitter["metadata"] +
-                        _pack_meta(**{contract["na"]: contract["dt"]})
-                    )
+                    metadata=emitter["metadata"] + metadata
                 )
             )
         )

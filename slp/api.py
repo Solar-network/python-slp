@@ -1,5 +1,7 @@
 # -*- coding:utf-8 -*-
 
+# TODO: https://editor.swagger.io/
+
 import slp
 import math
 import traceback
@@ -148,6 +150,7 @@ def tokens(page=1, limit=50):
         ], []
     )
     return {
+        "status": 200,
         "meta": {
             "count": len(data),
             "totalCount": total,
@@ -217,6 +220,7 @@ def tokens_by_owner(addr, page=1, limit=50):
         ], []
     )
     return {
+        "status": 200,
         "meta": {
             "count": len(data),
             "totalCount": total,
@@ -239,6 +243,7 @@ def addresses(page=1, limit=100, **kw):
     start = (page-1) * limit
     data = aggregation[start:start + min(100, limit)]
     return {
+        "status": 200,
         "meta": {
             "count": len(data),
             "totalCount": total,
@@ -263,6 +268,7 @@ def address(address, page=1, limit=100):
     start = (page-1) * limit
     data = aggregation[start:start + min(100, limit)]
     return {
+        "status": 200,
         "meta": {
             "count": len(data),
             "totalCount": total,
@@ -277,7 +283,7 @@ def address(address, page=1, limit=100):
     "/api/balance/<str:tokenId>/<str:address>",
     methods=["GET"], app=srv.uJsonHandler
 )
-def balance(address, tokenId, page=1, limit=100, **kw):
+def balance(address, tokenId):
     aggregation = list(dbapi.wallets(address, tokenId))
     if len(aggregation):
         return {"balance": aggregation[0]["balance"]}
@@ -285,10 +291,44 @@ def balance(address, tokenId, page=1, limit=100, **kw):
         return {"status": 400, "msg": "balance not found"}
 
 
-# "/transactions"
-# "/transaction/{txid}"
-# "/transactions/{tokenid}"
-# "/transactions/{tokenid}/{address}"
+@srv.bind("/api/transactions", methods=["GET"], app=srv.uJsonHandler)
+def transactions(page=1, limit=100, **kw):
+    page = int(page)
+    limit = int(limit)
+    # computes count and execute first filter
+    aggregation = list(
+        dbapi.transactions(
+            tokenId=kw.get("tokenId", None),
+            address=kw.get("address", None)
+        )
+    )
+    total = len(aggregation)
+    pages = int(math.ceil(total / float(limit)))
+    # jump to asked page
+    start = (page-1) * limit
+    data = aggregation[start:start + min(100, limit)]
+    return {
+        "status": 200,
+        "meta": {
+            "count": len(data),
+            "totalCount": total,
+            "page": page,
+            "pageCount": pages
+        },
+        "data": data
+    }
+
+
+@srv.bind(
+    "/api/transactions/<str:txid>", methods=["GET"], app=srv.uJsonHandler
+)
+def transaction(txid):
+    aggregation = list(dbapi.transactions(txid=txid))
+    if len(aggregation):
+        return aggregation[0]
+    else:
+        return {"status": 400, "msg": "tx %s not found" % txid}
+
 
 # "/metadata/{txid}"
 # "/metadata/{tokenid}"
