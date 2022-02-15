@@ -292,7 +292,11 @@ def parse_block(block, peer=None):
                 fields["timestamp"] = timestamp + interval * int(index)
                 # compute token id for GENESIS contracts
                 if fields["tp"] == "GENESIS":
-                    if fields["sy"] in slp.JSON.ask("denied tickers"):
+                    if fields["sy"] in slp.JSON.ask(
+                        "denied tickers"
+                    ) or dbapi.find_reccord(
+                        sy=fields["sy"], legit=True
+                    ) is not None:
                         raise Exception(
                             "'%s' ticker is denied..." % fields["sy"]
                         )
