@@ -285,10 +285,12 @@ def apply_addmeta(contract, **options):
         emitter = _emitter_check(contract["emitter"], tokenId, blockstamp)
         # try to read metadata using key/value pair in na/dt or json string in
         # dt
-        if "na" in contract:
+        if contract.get("na", None) not in [None, "", False]:
             metadata = _pack_meta(**{contract["na"]: contract["dt"]})
         else:
-            metadata = _pack_meta(json.loads(contract["dt"]))
+            data = json.loads(contract["dt"])
+            assert isinstance(data, dict)
+            metadata = _pack_meta(data)
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
