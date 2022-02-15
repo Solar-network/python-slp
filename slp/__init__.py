@@ -26,7 +26,7 @@ VALIDATION = {
     "na": lambda value: re.match(r"^.{3,24}$", value) is not None,
     "du": lambda value: (value == "") or (
         re.match(
-            r"(https?|ipfs|ipns|dweb):\/\/[a-z0-9\/:%_+.,#?!@&=-]{3,180}",
+            r"(https?|ipfs|ipns|dweb):\/\/[a-zA-Z0-9\/:%_+.,#?!@&=-]{3,180}",
             value
         )
     ) is not None,
