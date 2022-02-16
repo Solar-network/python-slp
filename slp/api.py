@@ -390,11 +390,15 @@ def slp_vendorfield(slp_type, tp, **kw):
             fields.update(meta)
         for key in [k for k in ["pa", "mi"] if k in fields]:
             fields[key] = fields[key] in ["TRUE", "True", "true", "1", 1, True]
-        return {
-            "vendorField": serde.unpack_slp(
-                getattr(serde, "pack_%s" % slp_type)(tp.upper(), **fields)
-            )
-        }
+        packed = getattr(serde, "pack_%s" % slp_type)(tp.upper(), **fields)
+        if isinstance(packed, list):
+            return {
+                "vendorField": [serde.unpack_slp(p) for p in packed]
+            }
+        else:
+            return {
+                "vendorField": serde.unpack_slp(packed)
+            }
     except Exception as error:
         slp.LOG.error(
             "Error trying to compute : %s\n%s", kw, traceback.format_exc()
