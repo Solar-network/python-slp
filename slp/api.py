@@ -348,6 +348,14 @@ def slp_smartbridge(slp_type, tp, **kw):
             [k, v] for k, v in kw.items()
             if k in slp.JSON.ask("slp fields")
         )
+        if slp_type[-1] in ["2"]:
+            meta = dict(
+                [k, v] for k, v in kw.items()
+                if k not in list(fields.keys()) + [
+                    "url", "headers", "data", "method"
+                ]
+            )
+            fields.update(meta)
         for key in [k for k in ["pa", "mi"] if k in fields]:
             fields[key] = fields[key] in ["TRUE", "True", "true", "1", 1, True]
         return {
@@ -372,6 +380,14 @@ def slp_vendorfield(slp_type, tp, **kw):
             [k, v] for k, v in kw.items()
             if k in slp.JSON.ask("slp fields")
         )
+        if slp_type[-1] in ["2"]:
+            meta = dict(
+                [k, v] for k, v in kw.items()
+                if k not in list(fields.keys()) + [
+                    "url", "headers", "data", "method"
+                ]
+            )
+            fields.update(meta)
         for key in [k for k in ["pa", "mi"] if k in fields]:
             fields[key] = fields[key] in ["TRUE", "True", "true", "1", 1, True]
         return {

@@ -217,7 +217,7 @@ def unpack_slp2_addmeta(data, height=None):
         zip(["tp", "id", "ch"], struct.unpack(fixed_fmt, fixed)),
         **{
             "dt": json.dumps(
-                _unpack_meta(varia), sort_keys=True, separators=(",",":")
+                _unpack_meta(varia), sort_keys=True, separators=(",", ":")
             )
         }
     )
@@ -280,7 +280,7 @@ def pack_slp1(*args, **kwargs):
 
 
 def pack_slp2(*args, **kwargs):
-    print(args)
+    print(args, kwargs)
     if args[0] in "PAUSE,RESUME,NEWOWNER,AUTHMETA,REVOKEMETA,CLONE":
         smartbridge = pack_slp2_non_fungible(*args, **kwargs)
     elif args[0] == "ADDMETA":

@@ -390,11 +390,7 @@ def transactions(txid=None, tokenId=None, address=None):
                         'address': '$receiver',
                         'amount': '$qt'
                     },
-                    'metaName': {
-                        '$cond': [
-                            {'$eq': ['$tp', 'ADDMETA']}, '$na', None
-                        ]
-                    },
+                    'metaRef': '$tx',
                     'metaData': '$dt',
                     'metaChunck': '$ch',
                     'note': '$no',
