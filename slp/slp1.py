@@ -309,6 +309,12 @@ def apply_newowner(contract, **options):
             dbapi.update_slp1_wallet(
                 receiver["address"], tokenId,
                 {"owner": True, "blockStamp": blockstamp}
+            ),
+            dbapi.update_contract(
+                tokenId, {
+                    "height": contract["height"], "index": contract["index"],
+                    "owner": receiver["address"]
+                }
             )
         ]
         return dbapi.set_legit(contract, check.count(False) == 0)
