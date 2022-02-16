@@ -270,6 +270,7 @@ def token_details(tokenId):
                     '$getField': {'field': 'timestamp', 'input': '$_0'}
                 },
                 'symbol': '$symbol',
+                'tokenName': '$name',
                 'documentUri': '$document',
                 'genesisQuantity': {
                     '$toDouble': {'$getField': 'globalSupply'}
@@ -382,15 +383,22 @@ def transactions(txid=None, tokenId=None, address=None):
                     'tokenIdHex': '$id',
                     'timestamp_unix': '$timestamp',
                     'symbol': '$sy',
-                    'name': '$na',
+                    'tokenName': '$na',
                     'dicumentUri': '$du',
                     'decimals': '$de',
                     'sendOutput': {
                         'address': '$receiver',
                         'amount': '$qt'
                     },
+                    'metaName': {
+                        '$cond': [
+                            {'$eq': ['$tp', 'ADDMETA']}, '$na', None
+                        ]
+                    },
+                    'metaData': '$dt',
+                    'metaChunck': '$ch',
                     'note': '$no',
-                    'amount': {'$divide': ['$cost', 100000000]}
+                    'cost': {'$divide': ['$cost', 100000000]}
                 }
             }}
         ]
