@@ -313,7 +313,8 @@ def token_details(tokenId):
                 },
             },
             'lastUpdatedBlock': {
-                '$getField': {'field': 'height', 'input': {
+                '$getField': {
+                    'field': 'height', 'input': {
                         '$last': '$reccords'
                     }
                 }
@@ -331,7 +332,7 @@ def wallets(address=None, tokenId=None):
     return db.contracts.aggregate(
         [
             {'$limit': 1},
-            {'$project': {'_id': '$$REMOVE'}}
+            {'$project': {'_id': '$$REMOVE'}},
         ] + [
             {'$lookup': {'from': col[1:], 'pipeline': ppln, 'as': col}}
             for col in slp.JSON.ask("slp types")
@@ -346,14 +347,29 @@ def wallets(address=None, tokenId=None):
             },
             {'$unwind': '$union'},
             {'$replaceRoot': {'newRoot': '$union'}},
+            {'$lookup': {
+                'from': 'contracts',
+                'localField': 'tokenId', 'foreignField': 'tokenId',
+                'as': 'contract'
+            }},
             {
                 '$addFields': {
                     'balance': {'$toDouble': {'$getField': 'balance'}}
                 }
             },
             {'$project': {
-                '_id': 0, 'address': 1, 'balance': 1, 'tokenId': 1, 'owner': 1,
-                'frozen': 1, 'blockStamp': 1
+                '_id': 0, 'address': 1, 'balance': 1, 'tokenId': 1,
+                'tokenName': {
+                    '$getField': {
+                        'field': 'name', 'input': {'$first': '$contract'}
+                    }
+                },
+                'symbol': {
+                    '$getField': {
+                        'field': 'symbol', 'input': {'$first': '$contract'}
+                    }
+                },
+                'owner': 1, 'frozen': 1, 'blockStamp': 1,
             }}
         ]
     )
