@@ -20,6 +20,7 @@ BLOCKCHAIN_NODE = False
 REGEXP = re.compile(".*")
 VALIDATION = {
     "id": lambda value: re.match(r"^[0-9a-fA-F]{32}$", value) is not None,
+    "tx": lambda value: re.match(r"^[0-9a-fA-F]{64}$", value) is not None,
     "qt": lambda value: isinstance(value, (int, float)),
     "de": lambda value: 0 <= value <= 8,
     "sy": lambda value: re.match(r"^[0-9a-zA-Z]{3,8}$", value) is not None,

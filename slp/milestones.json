@@ -11,11 +11,11 @@
         "slp types": ["sslp1", "sslp2"],
         "slp formats": {
             "sslp1": ["<BBQ??", "<B16sQ", "<B16s"],
-            "sslp2": ["<B?", "<B16s", "<B16s128s"]
+            "sslp2": ["<B?", "<B16s", "<B16s32s"]
         },
         "slp fields": [
             "tp", "id", "de", "qt", "sy", "na", "du", "no", "pa", "mi", "ch",
-            "dt"
+            "dt", "tx"
         ],
         "input types": {
             "GENESIS": 0, "BURN": 1, "MINT": 2, "SEND": 3, "PAUSE": 4,

@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 
 import slp
+import json
 import struct
 import binascii
 
@@ -214,7 +215,11 @@ def unpack_slp2_addmeta(data, height=None):
     varia = data[n:].encode()
     result = dict(
         zip(["tp", "id", "ch"], struct.unpack(fixed_fmt, fixed)),
-        **{"dt": _unpack_meta(varia)}
+        **{
+            "dt": json.dumps(
+                _unpack_meta(varia), sort_keys=True, separators=(",",":")
+            )
+        }
     )
     result["id"] = binascii.hexlify(result["id"]).decode()
     result["tp"] = slp.TYPES_INPUT[result["tp"]]
@@ -225,10 +230,11 @@ def unpack_slp2_voidmeta(data, height=None):
     fixed_fmt = slp.JSON.ask("slp formats", height)[slp.SLP2][2]
     fixed = binascii.unhexlify(data)
     result = dict(
-        zip(["tp", "tx"], struct.unpack(fixed_fmt, fixed)),
+        zip(["tp", "id", "tx"], struct.unpack(fixed_fmt, fixed)),
     )
     result["id"] = binascii.hexlify(result["id"]).decode()
     result["tx"] = binascii.hexlify(result["tx"]).decode()
+    result["tp"] = slp.TYPES_INPUT[result["tp"]]
     return {slp.SLP2: result}
 
 
@@ -250,10 +256,10 @@ MAP = {
         "05": unpack_slp2_non_fungible,
         "06": unpack_slp2_non_fungible,
         "09": unpack_slp2_non_fungible,
-        "10": unpack_slp2_addmeta,
-        "11": unpack_slp2_non_fungible,
-        "12": unpack_slp2_voidmeta,
-        "13": unpack_slp2_non_fungible
+        "0a": unpack_slp2_addmeta,
+        "0b": unpack_slp2_voidmeta,
+        "0c": unpack_slp2_non_fungible,
+        "0d": unpack_slp2_non_fungible
     }
 }
 
@@ -274,6 +280,7 @@ def pack_slp1(*args, **kwargs):
 
 
 def pack_slp2(*args, **kwargs):
+    print(args)
     if args[0] in "PAUSE,RESUME,NEWOWNER,AUTHMETA,REVOKEMETA,CLONE":
         smartbridge = pack_slp2_non_fungible(*args, **kwargs)
     elif args[0] == "ADDMETA":

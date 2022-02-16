@@ -20,7 +20,7 @@ import json
 import traceback
 
 from slp import dbapi
-from slp.serde import _pack_varia
+from slp.serde import _pack_varia, _unpack_meta
 
 
 def _pack_meta(**data):
@@ -290,7 +290,7 @@ def apply_addmeta(contract, **options):
         else:
             data = json.loads(contract["dt"])
             assert isinstance(data, dict)
-            metadata = _pack_meta(data)
+            metadata = _pack_meta(**data)
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
@@ -319,6 +319,15 @@ def apply_voidmeta(contract, **options):
         _token_check(tokenId)
         # EMITTER check ---
         emitter = _emitter_check(contract["emitter"], tokenId, blockstamp)
+        # 
+        reccord = dbapi.find_reccord(txid=contract["tx"])
+        assert reccord is not None
+        if reccord.get("na", None) not in [None, "", False]:
+            keys = ["na"]
+        else:
+            data = json.loads(reccord["dt"])
+            assert isinstance(data, dict)
+            keys = list(data.keys())
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
@@ -327,10 +336,13 @@ def apply_voidmeta(contract, **options):
         slp.LOG.error("invalid contract: %s", traceback.format_exc())
         return dbapi.set_legit(contract, False)
     else:
+        metadata = _unpack_meta(emitter["metadata"])
+        for key in keys:
+            metadata.pop(key, False)
         return dbapi.set_legit(
             contract, dbapi.update_slp2_wallet(
                 emitter["address"], tokenId, dict(
-                    blockStamp=blockstamp, metadata=b""
+                    blockStamp=blockstamp, metadata=_pack_meta(**metadata)
                 )
             )
         )
