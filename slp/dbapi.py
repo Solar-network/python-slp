@@ -251,9 +251,9 @@ def token_details(tokenId):
                     '$type', {'$subtract': [{'$strLenCP': '$type'}, 1]}, 1
                 ]
             },
-            '_minted': {'$toDouble': {'$getField': 'minted'}},
-            '_burned': {'$toDouble': {'$getField': 'burned'}},
-            '_crossed': {'$toDouble': {'$getField': 'crossed'}},
+            '_minted': {'$getField': 'minted'},
+            '_burned': {'$getField': 'burned'},
+            '_crossed': {'$getField': 'crossed'},
             '_0': {'$first': '$reccords'}
         }
     }
@@ -266,6 +266,9 @@ def token_details(tokenId):
                 'ownerAddress': '$owner',
                 'tokenIdHex': '$tokenId',
                 'versionType': '$_type',
+                'genesis_transaction_id': {
+                    '$getField': {'field': 'txid', 'input': '$_0'}
+                },
                 'genesis_timestamp_unix': {
                     '$getField': {'field': 'timestamp', 'input': '$_0'}
                 },
@@ -273,7 +276,7 @@ def token_details(tokenId):
                 'tokenName': '$name',
                 'documentUri': '$document',
                 'genesisQuantity': {
-                    '$toDouble': {'$getField': 'globalSupply'}
+                    '$toString': {'$getField': 'globalSupply'}
                 },
                 'decimals': {'$getField': {'field': 'de', 'input': '$_0'}},
                 'pausable': {'$getField': {'field': 'pa', 'input': '$_0'}},
@@ -295,17 +298,17 @@ def token_details(tokenId):
                         'in': {'$add': ["$$value", "$$this"]}
                     }
                 },
-                'qty_token_minted': '$_minted',
-                'qty_token_burned': '$_burned',
-                'qty_token_crossed': '$_crossed',
+                'qty_token_minted': {'$toString': '$_minted'},
+                'qty_token_burned': {'$toString': '$_burned'},
+                'qty_token_crossed': {'$toString': '$_crossed'},
                 'qty_token_circulating_supply': {
                     '$cond': [
-                        {'$eq': ['$_type', '1']}, {
+                        {'$eq': ['$_type', '1']}, {'$toString': {
                             '$subtract': [
                                 {'$subtract': ['$_minted', '$_burned']},
                                 '$_crossed'
                             ]
-                        }, None
+                        }}, None
                     ]
                 },
                 'qty_total_spent': {
@@ -354,7 +357,7 @@ def wallets(address=None, tokenId=None):
             }},
             {
                 '$addFields': {
-                    'balance': {'$toDouble': {'$getField': 'balance'}}
+                    'balance': {'$toString': {'$getField': 'balance'}}
                 }
             },
             {'$project': {
