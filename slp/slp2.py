@@ -95,19 +95,20 @@ def manage(contract, **options):
 def apply_genesis(contract, **options):
     tokenId = contract["id"]
     try:
-        # blockchain transaction amount have to match GENESIS cost
+        comment = "blockchain transaction amount has to match GENESIS cost"
         assert contract["cost"] >= slp.JSON.ask(
             "cost", contract["height"]
-        )[slp.SLP2]["GENESIS"]
-        # GENESIS contract have to be sent to master address
+        )[slp.SLP2].get("GENESIS", 1)
+        comment = "GENESIS contract has to be sent to master address"
         assert contract["receiver"] == slp.JSON["master address"]
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
     except AssertionError:
+        contract["comment"] = comment
         slp.LOG.debug("assertion error with %s", contract)
         slp.LOG.error("invalid contract: %s", traceback.format_exc())
-        return dbapi.set_legit(contract, False)
+        return dbapi.set_legit({"_id": contract["_id"]}, False)
     else:
         check = [
             # add new contract
@@ -138,9 +139,14 @@ def apply_newowner(contract, **options):
     tokenId = contract["id"]
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
-        # TOKEN check ---
+        comment = "blockchain transaction amount has to match NEWOWNER cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP2].get("NEWOWNER", 1)
+        comment = f"token {tokenId} does not exist or paused by owner"
         _token_check(tokenId)
-        # EMITTER check ---
+        comment = \
+            f"wallet {contract['emitter']} does not exist or not the owner"
         emitter = _emitter_ownership_check(
             contract["emitter"], tokenId, blockstamp
         )
@@ -152,9 +158,10 @@ def apply_newowner(contract, **options):
         if options.get("assert_only", False):
             return True
     except AssertionError:
+        contract["comment"] = comment
         slp.LOG.debug("!%s", contract)
         slp.LOG.error("invalid contract: %s", traceback.format_exc())
-        return dbapi.set_legit(contract, False)
+        return dbapi.set_legit({"_id": contract["_id"]}, False)
     else:
         check = []
         if receiver is None:
@@ -194,21 +201,27 @@ def apply_pause(contract, **options):
     try:
         # GENESIS check ---
         reccord = dbapi.find_reccord(id=tokenId, tp="GENESIS")
-        # token must be pausable
+        comment = f"{tokenId} token is not pausable"
         assert reccord is not None and reccord["pa"] is True
-        # PAUSE contract have to be sent to master address
+        comment = "blockchain transaction amount has to match PAUSE cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP2].get("PAUSE", 1)
+        comment = "PAUSE contract has to be sent to master address"
         assert contract["receiver"] == slp.JSON["master address"]
-        # TOKEN check ---
+        comment = f"token {tokenId} does not exist or already paused by owner"
         _token_check(tokenId)
-        # EMITTER check ---
+        comment = \
+            f"wallet {contract['emitter']} does not exist or not the owner"
         _emitter_ownership_check(contract["emitter"], tokenId, blockstamp)
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
     except Exception:
+        contract["comment"] = comment
         slp.LOG.debug("!%s", contract)
         slp.LOG.error("invalid contract: %s", traceback.format_exc())
-        return dbapi.set_legit(contract, False)
+        return dbapi.set_legit({"_id": contract["_id"]}, False)
     else:
         return dbapi.set_legit(
             contract, dbapi.update_contract(
@@ -224,19 +237,25 @@ def apply_resume(contract, **options):
     tokenId = contract["id"]
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
-        # RESUME contract have to be sent to master address
+        comment = "blockchain transaction amount has to match RESUME cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP2].get("RESUME", 1)
+        # RESUME contract has to be sent to master address
         assert contract["receiver"] == slp.JSON["master address"]
-        # TOKEN check ---
+        comment = f"token {tokenId} does not exist or already resumed by owner"
         _token_check(tokenId, paused=True)
-        # EMITTER check ---
+        comment = \
+            f"wallet {contract['emitter']} does not exist or not the owner"
         _emitter_ownership_check(contract["emitter"], tokenId, blockstamp)
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
     except Exception:
+        contract["comment"] = comment
         slp.LOG.debug("!%s", contract)
         slp.LOG.error("invalid contract: %s", traceback.format_exc())
-        return dbapi.set_legit(contract, False)
+        return dbapi.set_legit({"_id": contract["_id"]}, False)
     else:
         return dbapi.set_legit(
             contract, dbapi.update_contract(
@@ -252,12 +271,16 @@ def apply_authmeta(contract, **options):
     tokenId = contract["id"]
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
-        # TOKEN check ---
+        comment = "blockchain transaction amount has to match AUTHMETA cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP2].get("AUTHMETA", 1)
+        comment = f"token {tokenId} does not exist or paused by owner"
         _token_check(tokenId)
-        # EMITTER check ---
+        comment = \
+            f"wallet {contract['emitter']} does not exist or not the owner"
         _emitter_ownership_check(contract["emitter"], tokenId, blockstamp)
-        # RECEIVER check ---
-        # receiver should not exist in slp2 database
+        comment = f"wallet {contract['receiver']} already authorized"
         assert dbapi.find_slp2_wallet(
             address=contract["receiver"], tokenId=tokenId
         ) is None
@@ -265,9 +288,10 @@ def apply_authmeta(contract, **options):
         if options.get("assert_only", False):
             return True
     except Exception:
+        contract["comment"] = comment
         slp.LOG.debug("!%s", contract)
         slp.LOG.error("invalid contract: %s", traceback.format_exc())
-        return dbapi.set_legit(contract, False)
+        return dbapi.set_legit({"_id": contract["_id"]}, False)
     else:
         return dbapi.set_legit(
             contract, dbapi.db.slp2.insert_one(
@@ -283,11 +307,16 @@ def apply_addmeta(contract, **options):
     tokenId = contract["id"]
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
-        # ADDMETA contract have to be sent to master address
+        comment = "blockchain transaction amount has to match ADDMETA cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP2].get("ADDMETA", 1)
+        comment = " ADDMETA contract has to be sent to master address"
         assert contract["receiver"] == slp.JSON["master address"]
-        # TOKEN check ---
+        comment = f"token {tokenId} does not exist or paused by owner"
         _token_check(tokenId)
-        # EMITTER check ---
+        comment = \
+            f"wallet {contract['emitter']} does not exist or not allowed"
         emitter = _emitter_check(contract["emitter"], tokenId, blockstamp)
         # try to read metadata using key/value pair in na/dt or json string in
         # dt
@@ -295,15 +324,17 @@ def apply_addmeta(contract, **options):
             metadata = _pack_meta(**{contract["na"]: contract["dt"]})
         else:
             data = json.loads(contract["dt"])
+            comment = "metadata should be a dictionary instance"
             assert isinstance(data, dict)
             metadata = _pack_meta(**data)
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
     except Exception:
+        contract["comment"] = comment
         slp.LOG.debug("!%s", contract)
         slp.LOG.error("invalid contract: %s", traceback.format_exc())
-        return dbapi.set_legit(contract, False)
+        return dbapi.set_legit({"_id": contract["_id"]}, False)
     else:
         return dbapi.set_legit(
             contract, dbapi.update_slp2_wallet(
@@ -319,28 +350,35 @@ def apply_voidmeta(contract, **options):
     tokenId = contract["id"]
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
-        # VOIDMETA contract have to be sent to master address
+        comment = "blockchain transaction amount has to match VOIDMETA cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP2].get("VOIDMETA", 1)
+        comment = "VOIDMETA contract has to be sent to master address"
         assert contract["receiver"] == slp.JSON["master address"]
-        # TOKEN check ---
+        comment = f"token {tokenId} does not exist or paused by owner"
         _token_check(tokenId)
-        # EMITTER check ---
+        comment = \
+            f"wallet {contract['emitter']} does not exist or not allowed"
         emitter = _emitter_check(contract["emitter"], tokenId, blockstamp)
-        # 
+        comment = f"blockchain transaction {contract['tx']} not found"
         reccord = dbapi.find_reccord(txid=contract["tx"])
         assert reccord is not None
         if reccord.get("na", None) not in [None, "", False]:
             keys = ["na"]
         else:
             data = json.loads(reccord["dt"])
+            comment = "metadata should be a dictionary instance"
             assert isinstance(data, dict)
             keys = list(data.keys())
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
     except Exception:
+        contract["comment"] = comment
         slp.LOG.debug("!%s", contract)
         slp.LOG.error("invalid contract: %s", traceback.format_exc())
-        return dbapi.set_legit(contract, False)
+        return dbapi.set_legit({"_id": contract["_id"]}, False)
     else:
         metadata = _unpack_meta(emitter["metadata"])
         for key in keys:
@@ -358,19 +396,25 @@ def apply_revokemeta(contract, **options):
     tokenId = contract["id"]
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
-        # TOKEN check ---
+        comment = "blockchain transaction amount has to match REVOKEMETA cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP2].get("REVOKEMETA", 1)
+        comment = f"token {tokenId} does not exist or paused by owner"
         _token_check(tokenId)
-        # EMITTER check ---
+        comment = \
+            f"wallet {contract['emitter']} does not exist or not the owner"
         _emitter_ownership_check(contract["emitter"], tokenId, blockstamp)
-        # RECEIVER check ---
+        comment = f"wallet {contract['receiver']} already unauthorized"
         receiver = _receiver_check(contract["receiver"], tokenId)
         # return True if assertion only asked (test if contract is valid)
         if options.get("assert_only", False):
             return True
     except Exception:
+        contract["comment"] = comment
         slp.LOG.debug("!%s", contract)
         slp.LOG.error("invalid contract: %s", traceback.format_exc())
-        return dbapi.set_legit(contract, False)
+        return dbapi.set_legit({"_id": contract["_id"]}, False)
     else:
         return dbapi.set_legit(
             contract, dbapi.db.slp2.delete_one(receiver)
@@ -381,23 +425,28 @@ def apply_clone(contract, **options):
     tokenId = contract["id"]
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
-        # CLONE contract have to be sent to master address
+        comment = "blockchain transaction amount has to match CLONE cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP2].get("CLONE", 1)
+        comment = "CLONE contract has to be sent to master address"
         assert contract["receiver"] == slp.JSON["master address"]
-        # get tokenId genesis reccord from journal
         reccord = dbapi.find_reccord(tp="GENESIS", id=contract["id"])
         assert reccord is not None
-        # TOKEN check ---
+        comment = f"token {tokenId} does not exist or paused by owner"
         _token_check(tokenId)
-        # EMITTER check ---
+        comment = \
+            f"wallet {contract['emitter']} does not exist or not the owner"
         emitter = _emitter_ownership_check(
             contract["emitter"], tokenId, blockstamp
         )
         if options.get("assert_only", False):
             return True
     except Exception:
+        contract["comment"] = comment
         slp.LOG.debug("!%s", contract)
         slp.LOG.error("invalid contract: %s", traceback.format_exc())
-        return dbapi.set_legit(contract, False)
+        return dbapi.set_legit({"_id": contract["_id"]}, False)
     else:
         # compute the new id of cloned token
         new_tokenId = slp.get_token_id(
