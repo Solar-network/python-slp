@@ -41,7 +41,7 @@ def apply_genesis(contract, **options):
         comment = "blockchain transaction amount have to match GENESIS cost"
         assert contract["cost"] >= slp.JSON.ask(
             "cost", contract["height"]
-        )[slp.SLP1]["GENESIS"]
+        )[slp.SLP1].get("GENESIS", 1)
         comment = "GENESIS contract have to be sent to master address"
         assert contract["receiver"] == slp.JSON["master address"]
         # return True if assertion only asked (test if contract is valid)
@@ -95,6 +95,10 @@ def apply_burn(contract, **options):
     try:
         comment = "burn quantity should avoid decimal part"
         assert contract["qt"] % 1 == 0
+        comment = "blockchain transaction amount have to match BURN cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP1].get("BURN", 1)
         comment = "BURN contract have to be sent to master address"
         assert contract["receiver"] == slp.JSON["master address"]
         # get contract and wallet
@@ -158,6 +162,10 @@ def apply_mint(contract, **options):
         assert reccord is not None and reccord["mi"] is True
         comment = "minted quantity should avoid decimal part"
         assert contract["qt"] % 1 == 0
+        comment = "blockchain transaction amount have to match MINT cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP1].get("MINT", 1)
         comment = "MINT contract have to be sent to master address"
         assert contract["receiver"] == slp.JSON["master address"]
         token = dbapi.find_contract(tokenId=tokenId)
@@ -220,6 +228,10 @@ def apply_send(contract, **options):
     tokenId = contract["id"]
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
+        comment = "blockchain transaction amount have to match SEND cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP1].get("SEND", 1)
         token = dbapi.find_contract(tokenId=tokenId)
         comment = f"token {tokenId} does not exist"
         assert token is not None
@@ -271,6 +283,10 @@ def apply_newowner(contract, **options):
     tokenId = contract["id"]
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
+        comment = "blockchain transaction amount have to match NEWOWNER cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP1].get("NEWOWNER", 1)
         # TOKEN check ---
         token = dbapi.find_contract(tokenId=tokenId)
         comment = f"token {tokenId} does not exist"
@@ -330,6 +346,10 @@ def apply_freeze(contract, **options):
     tokenId = contract["id"]
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
+        comment = "blockchain transaction amount have to match FREEZE cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP1].get("FREEZE", 1)
         # TOKEN check ---
         token = dbapi.find_contract(tokenId=tokenId)
         comment = f"token {tokenId} does not exist"
@@ -374,6 +394,10 @@ def apply_unfreeze(contract, **options):
     tokenId = contract["id"]
     blockstamp = f"{contract['height']}#{contract['index']}"
     try:
+        comment = "blockchain transaction amount have to match UNFREEZE cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP1].get("UNFREEZE", 1)
         # TOKEN check ---
         token = dbapi.find_contract(tokenId=tokenId)
         comment = f"token {tokenId} does not exist"
@@ -421,6 +445,10 @@ def apply_pause(contract, **options):
         reccord = dbapi.find_reccord(id=tokenId, tp="GENESIS")
         comment = f"{tokenId} token is not pausable"
         assert reccord is not None and reccord["pa"] is True
+        comment = "blockchain transaction amount have to match PAUSE cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP1].get("PAUSE", 1)
         comment = "PAUSE contract have to be sent to master address"
         assert contract["receiver"] == slp.JSON["master address"]
         # TOKEN check ---
@@ -465,6 +493,10 @@ def apply_resume(contract, **options):
         reccord = dbapi.find_reccord(id=tokenId, tp="GENESIS")
         comment = f"{tokenId} token is not pausable"
         assert reccord is not None and reccord["pa"] is True
+        comment = "blockchain transaction amount have to match RESUME cost"
+        assert contract["cost"] >= slp.JSON.ask(
+            "cost", contract["height"]
+        )[slp.SLP1].get("RESUME", 1)
         comment = "RESUME contract have to be sent to master address"
         assert contract["receiver"] == slp.JSON["master address"]
         # TOKEN check ---
