@@ -1,6 +1,7 @@
 [
     {
         "height": 1,
+        "slp id hash": "md5",
         "denied tickers": [
             "XQR", "BTC", "LTC", "BCH", "ETH", "EOS", "XRP", "USDT", "XMR",
             "DASH", "ETC", "ARK"
@@ -36,5 +37,8 @@
         "slp formats": {
             "sslp1": ["<BBQ??", "<B16sd", "<B16s"]
         }
+    }, {
+        "height": 540000,
+        "slp id hash": "sha256"
     }
 ]

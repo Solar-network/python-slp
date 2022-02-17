@@ -19,7 +19,9 @@ ROOT = os.path.abspath(os.path.dirname(__file__))
 BLOCKCHAIN_NODE = False
 REGEXP = re.compile(".*")
 VALIDATION = {
-    "id": lambda value: re.match(r"^[0-9a-fA-F]{32}$", value) is not None,
+    "id": lambda value:
+        re.match(r"^[0-9a-fA-F]{32}$", value) is not None or
+        re.match(r"^[0-9a-fA-F]{64}$", value) is not None,
     "tx": lambda value: re.match(r"^[0-9a-fA-F]{64}$", value) is not None,
     "qt": lambda value: isinstance(value, (int, float)),
     "de": lambda value: 0 <= value <= 8,
@@ -93,7 +95,9 @@ def get_token_id(slp_type, symbol, blockheight, txid):
     Generate token id.
     """
     raw = "%s.%s.%s.%s" % (slp_type.upper(), symbol, blockheight, txid)
-    return hashlib.md5(raw.encode("utf-8")).hexdigest()
+    return getattr(
+        hashlib, JSON.ask("slp id hash", blockheight)
+    )(raw.encode("utf-8")).hexdigest()
 
 
 class Config(dict):
